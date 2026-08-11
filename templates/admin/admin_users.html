@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Users | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔥</span>
+    <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div>
+  </div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item active">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span>
+        <span class="flash-text">{{ msg }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <h2>Manage Users</h2>
+      <p>Approve, suspend, or manage roles for all registered accounts.</p>
+    </div>
+    <button class="btn-primary" onclick="document.getElementById('addUserModal').classList.add('active')">+ Add Officer</button>
+  </div>
+
+  <!-- Stats row -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="kpi-card kpi-approved"><span class="kpi-value">{{ counts.applicants }}</span><div class="kpi-label">Applicants</div></div>
+    <div class="kpi-card kpi-inspection"><span class="kpi-value">{{ counts.officers }}</span><div class="kpi-label">Officers</div></div>
+    <div class="kpi-card kpi-pending"><span class="kpi-value">{{ counts.pending_approval }}</span><div class="kpi-label">Pending Approval</div></div>
+    <div class="kpi-card kpi-danger"><span class="kpi-value">{{ counts.suspended }}</span><div class="kpi-label">Suspended</div></div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <input class="filter-input" type="text" id="userSearch" placeholder="🔍  Search name or email…" oninput="filterUsers()">
+    <select class="filter-select" id="roleFilter" onchange="filterUsers()">
+      <option value="">All Roles</option>
+      <option value="Applicant">Applicant</option>
+      <option value="Officer">Officer</option>
+      <option value="Admin">Admin</option>
+    </select>
+    <select class="filter-select" id="statusFilter" onchange="filterUsers()">
+      <option value="">All Statuses</option>
+      <option value="Active">Active</option>
+      <option value="Suspended">Suspended</option>
+      <option value="Pending">Pending</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <table class="data-table" id="userTable">
+      <thead><tr>
+        <th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Apps</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr data-name="{{ u.name|lower }}" data-email="{{ u.email|lower }}" data-role="{{ u.role }}" data-status="{{ u.status }}">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ember),#8b1a00);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:#fff;flex-shrink:0">{{ u.name[0].upper() }}</div>
+              <div class="cell-name">{{ u.name }}</div>
+            </div>
+          </td>
+          <td style="color:var(--text-secondary);font-size:13px">{{ u.email }}</td>
+          <td>
+            <span class="priority-badge {% if u.role=='Officer' %}priority-high{% elif u.role=='Admin' %}priority-critical{% else %}priority-normal{% endif %}">{{ u.role }}</span>
+          </td>
+          <td>
+            <span class="status-pill {% if u.status=='Active' %}status-approved{% elif u.status=='Suspended' %}status-rejected{% else %}status-pending{% endif %}">{{ u.status }}</span>
+          </td>
+          <td style="font-size:13px;color:var(--text-muted)">{{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}</td>
+          <td style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-primary)">{{ u.app_count }}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              {% if u.status == 'Active' %}
+                <form method="POST" action="{{ url_for('admin_suspend_user', user_id=u.user_id) }}" style="margin:0">
+                  <button type="submit" class="btn-reject" onclick="return confirm('Suspend {{ u.name }}?')">Suspend</button>
+                </form>
+              {% else %}
+                <form method="POST" action="{{ url_for('admin_activate_user', user_id=u.user_id) }}" style="margin:0">
+                  <button type="submit" class="btn-approve">Activate</button>
+                </form>
+              {% endif %}
+              <form method="POST" action="{{ url_for('admin_change_role', user_id=u.user_id) }}" style="display:flex;gap:4px;margin:0">
+                <select name="role" class="filter-select" style="padding:4px 8px;font-size:12px;min-width:100px">
+                  <option {% if u.role=='Applicant' %}selected{% endif %}>Applicant</option>
+                  <option {% if u.role=='Officer' %}selected{% endif %}>Officer</option>
+                  <option {% if u.role=='Admin' %}selected{% endif %}>Admin</option>
+                </select>
+                <button type="submit" class="btn-assign">Set</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Add Officer Modal -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Add New Officer</div>
+        <div class="modal-sub">Creates account with Officer role</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('addUserModal').classList.remove('active')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_add_officer') }}">
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Full Name</label>
+        <input type="text" name="name" placeholder="Officer full name" required>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="officer@firedept.gov" required>
+      </div>
+      <div class="form-group" style="margin-bottom:24px">
+        <label>Temporary Password</label>
+        <input type="password" name="password" placeholder="Min. 8 characters" required>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('addUserModal').classList.remove('active')">Cancel</button>
+        <button type="submit" class="btn-primary">Create Officer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function filterUsers() {
+  const q    = document.getElementById('userSearch').value.toLowerCase();
+  const role = document.getElementById('roleFilter').value;
+  const stat = document.getElementById('statusFilter').value;
+  document.querySelectorAll('#userTable tbody tr[data-name]').forEach(r => {
+    const nameMatch   = !q    || r.dataset.name.includes(q) || r.dataset.email.includes(q);
+    const roleMatch   = !role || r.dataset.role === role;
+    const statusMatch = !stat || r.dataset.status === stat;
+    r.style.display = nameMatch && roleMatch && statusMatch ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

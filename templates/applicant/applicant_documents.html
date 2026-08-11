@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documents | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item active">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>My Documents</h2><p>Upload and manage documents for your applications</p></div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start;">
+
+    <!-- Document list -->
+    <div>
+      <div class="table-card" style="margin-bottom:16px;">
+        <div style="padding:18px 20px 0;"><span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em;">Uploaded Documents ({{ docs|length }})</span></div>
+        <table class="data-table" style="margin-top:10px;">
+          <thead><tr><th>Document</th><th>Application</th><th>Type</th><th>Uploaded</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for doc in docs %}
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:18px;">
+                    {% if doc.doc_type and doc.doc_type.lower()=='pdf' %}📄{% elif doc.doc_type and doc.doc_type.lower() in ['jpg','jpeg','png'] %}🖼️{% else %}📁{% endif %}
+                  </span>
+                  <div>
+                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">{{ doc.doc_name or 'Document' }}</div>
+                    {% if doc.doc_type %}<div style="font-size:11px;color:var(--text-muted);">{{ doc.doc_type|upper }}</div>{% endif %}
+                  </div>
+                </div>
+              </td>
+              <td><a href="{{ url_for('applicant_view_application', app_id=doc.app_id) }}" style="color:var(--ember);">App #{{ doc.app_id }}</a></td>
+              <td><span style="font-size:12px;color:var(--text-muted);">{{ doc.doc_type or '—' }}</span></td>
+              <td>{{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else '—' }}</td>
+              <td style="display:flex;gap:6px;">
+                {% if doc.file_path %}
+                <a href="{{ url_for('static', filename=doc.file_path) }}" target="_blank" class="btn-action">View</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:40px;">No documents uploaded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Upload form -->
+    <div style="position:sticky; top:80px;">
+      <div class="card" style="border-top:2px solid var(--blue);">
+        <h3 style="color:var(--blue);">⬆️ Upload Document</h3>
+        <form method="POST" action="{{ url_for('applicant_upload_document') }}" enctype="multipart/form-data" style="margin-top:14px;">
+          <div class="form-group">
+            <label class="form-label">Application *</label>
+            <select name="app_id" class="form-control" required>
+              <option value="">— Select application —</option>
+              {% for app in apps %}
+              <option value="{{ app.app_id }}">App #{{ app.app_id }} — {{ app.type }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Document Name *</label>
+            <input type="text" name="doc_name" class="form-control" placeholder="e.g. Building Plan" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Document Type</label>
+            <select name="doc_type" class="form-control">
+              <option value="">— Select type —</option>
+              <option>Building Plan</option>
+              <option>Ownership Proof</option>
+              <option>Previous NOC</option>
+              <option>Fire Safety Audit</option>
+              <option>Identity Proof</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">File *</label>
+            <input type="file" name="document" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required style="padding:8px;">
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:6px;">Upload Document</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="overlay">
+    <div class="login-box">
+      <h1>Register</h1>
+      <p class="subtitle">Create your account</p>
+      <form method="POST" action="/register">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="Enter your name" required>
+
+        <label>Email</label>
+        <input type="email" name="email" placeholder="Enter your email" required>
+
+        <!-- ✅ Only one password input -->
+        <label>Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+
+        <!-- Password rules -->
+        <div id="password-rules">
+          <p id="rule-capital">❌ First letter must be capital</p>
+          <p id="rule-length">❌ At least 8 characters</p>
+          <p id="rule-number">❌ Must contain a number</p>
+          <p id="rule-special">❌ Must contain a special character (!@#$%^&*)</p>
+        </div>
+
+        <label>Role</label>
+        <select name="role" required>
+          <option value="Applicant">Applicant</option>
+          <option value="Officer">Officer</option>
+          <option value="Admin">Admin</option>
+        </select>
+
+        <button type="submit" class="login-btn">Register</button>
+      </form>
+      <div class="links">
+        <a href="/login" class="toggle">Already have an account? Login</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Inline JS or external script.js -->
+  <script>
+    document.getElementById("password").addEventListener("input", function() {
+      const pw = this.value;
+
+      // Rule: first letter capital
+      if (pw.length > 0 && pw[0] === pw[0].toUpperCase()) {
+        document.getElementById("rule-capital").textContent = "✅ First letter must be capital";
+      } else {
+        document.getElementById("rule-capital").textContent = "❌ First letter must be capital";
+      }
+
+      // Rule: length >= 8
+      if (pw.length >= 8) {
+        document.getElementById("rule-length").textContent = "✅ At least 8 characters";
+      } else {
+        document.getElementById("rule-length").textContent = "❌ At least 8 characters";
+      }
+
+      // Rule: contains number
+      if (/\d/.test(pw)) {
+        document.getElementById("rule-number").textContent = "✅ Must contain a number";
+      } else {
+        document.getElementById("rule-number").textContent = "❌ Must contain a number";
+      }
+
+      // Rule: contains special character
+      if (/[!@#$%^&*]/.test(pw)) {
+        document.getElementById("rule-special").textContent = "✅ Must contain a special character (!@#$%^&*)";
+      } else {
+        document.getElementById("rule-special").textContent = "❌ Must contain a special character (!@#$%^&*)";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics | Fire Dept</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🔥</span>
+        <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Officer Portal</div></div>
+    </div>
+    <nav>
+        <div class="nav-section">
+            <p class="nav-label">Command</p>
+            <a href="{{ url_for('officer_dashboard') }}" class="nav-item"><span class="nav-icon">⚡</span> Dashboard</a>
+            <a href="{{ url_for('alerts_page') }}" class="nav-item"><span class="nav-icon">🚨</span> Live Alerts</a>
+        </div>
+        <div class="nav-section">
+            <p class="nav-label">Operations</p>
+            <a href="{{ url_for('application_queue') }}" class="nav-item"><span class="nav-icon">📋</span> Application Queue</a>
+            <a href="{{ url_for('officer_inspections') }}" class="nav-item"><span class="nav-icon">🔍</span> Inspections</a>
+            <a href="{{ url_for('officer_analytics') }}" class="nav-item active"><span class="nav-icon">📊</span> Analytics</a>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="btn-logout">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+    <div class="page-header">
+        <div>
+            <h2>Analytics &amp; Reports</h2>
+            <p>Compliance trends, officer performance, and fee collection — all from live data.</p>
+        </div>
+    </div>
+
+    <!-- Avg processing KPI -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px;">
+        <div class="kpi-card">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-value">{{ avg_processing }}<span style="font-size:16px;color:var(--text-muted)">d</span></div>
+            <div class="kpi-label">Avg Processing Time</div>
+        </div>
+        {% set paid_fee = fee_summary | selectattr('status','equalto','Paid') | list %}
+        <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value">₹{{ '{:,.0f}'.format(paid_fee[0].total if paid_fee else 0) }}</div>
+            <div class="kpi-label">Total Fees Collected</div>
+        </div>
+        {% set active_noc = noc_status | selectattr('status','equalto','Active') | list %}
+        <div class="kpi-card">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">{{ active_noc[0].count if active_noc else 0 }}</div>
+            <div class="kpi-label">Active NOCs</div>
+        </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="charts-row">
+        <div class="chart-card chart-wide">
+            <div class="chart-header">
+                <h3>Monthly Application Volume</h3>
+                <span class="chart-sub">Last 6 months</span>
+            </div>
+            <canvas id="monthlyChart" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Application Types</h3>
+                <span class="chart-sub">All time breakdown</span>
+            </div>
+            <canvas id="typeChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Inspection Results</h3>
+                <span class="chart-sub">Pass / fail / pending</span>
+            </div>
+            <canvas id="inspectionChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>NOC Status</h3>
+                <span class="chart-sub">Active / Expired / Revoked</span>
+            </div>
+            <canvas id="nocChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Fee Collection</h3>
+                <span class="chart-sub">Paid / Unpaid / Pending</span>
+            </div>
+            <canvas id="feeChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Officer Performance Table -->
+    <div class="table-card" style="margin-top:8px;">
+        <div class="chart-header" style="padding:20px 24px 0;">
+            <h3 style="font-family:'Rajdhani',sans-serif;color:var(--ember-bright);font-size:17px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Officer Performance</h3>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Officer</th>
+                    <th>Total Processed</th>
+                    <th>Approved</th>
+                    <th>Rejected</th>
+                    <th>Approval Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for op in officer_performance %}
+                {% set rate = ((op.approved / op.processed) * 100) | round(1) if op.processed > 0 else 0 %}
+                <tr>
+                    <td><div class="cell-name">{{ op.officer_name }}</div></td>
+                    <td>{{ op.processed }}</td>
+                    <td><span style="color:#4ade80;font-weight:600;">{{ op.approved }}</span></td>
+                    <td><span style="color:#ef4444;font-weight:600;">{{ op.rejected }}</span></td>
+                    <td>
+                        <div class="perf-bar-wrap">
+                            <div class="perf-bar" style="width:{{ rate }}%"></div>
+                            <span>{{ rate }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="empty-state" style="padding:24px;text-align:center;color:var(--text-muted);">No data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Building Risk Table -->
+    {% if building_risk %}
+    <div class="table-card" style="margin-top:20px;">
+        <div class="chart-header" style="padding:20px 24px 0;">
+            <h3 style="font-family:'Rajdhani',sans-serif;color:var(--ember-bright);font-size:17px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Building Type Risk (Avg Inspection Score)</h3>
+            <span class="chart-sub" style="padding:0 24px 12px;display:block;">Lower score = higher risk</span>
+        </div>
+        <table class="data-table">
+            <thead><tr><th>Building Type</th><th>Avg Score</th><th>Total Applications</th><th>Risk Level</th></tr></thead>
+            <tbody>
+                {% for b in building_risk %}
+                <tr>
+                    <td>{{ b.building_type }}</td>
+                    <td>{{ b.avg_score | round(1) }}</td>
+                    <td>{{ b.total }}</td>
+                    <td>
+                        {% if b.avg_score < 40 %}
+                        <span class="status-pill status-rejected">High Risk</span>
+                        {% elif b.avg_score < 70 %}
+                        <span class="status-pill status-pending">Medium Risk</span>
+                        {% else %}
+                        <span class="status-pill status-approved">Low Risk</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</main>
+
+<script>
+Chart.defaults.color = '#8a8480';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+// ── Monthly Volume ─────────────────────────────────────────
+const monthlyData = {{ monthly_data | tojson }};
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: monthlyData.map(d => d.month),
+        datasets: [
+            { label: 'Approved', data: monthlyData.map(d => d.approved), backgroundColor: 'rgba(34,197,94,0.75)', borderRadius: 4 },
+            { label: 'Rejected', data: monthlyData.map(d => d.rejected), backgroundColor: 'rgba(239,68,68,0.75)',  borderRadius: 4 },
+            { label: 'Pending',  data: monthlyData.map(d => d.pending),  backgroundColor: 'rgba(251,191,36,0.75)', borderRadius: 4 }
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+});
+
+// ── Type Breakdown ─────────────────────────────────────────
+const typeData = {{ type_breakdown | tojson }};
+new Chart(document.getElementById('typeChart'), {
+    type: 'doughnut',
+    data: {
+        labels: typeData.map(d => d.type),
+        datasets: [{ data: typeData.map(d => d.count),
+            backgroundColor: ['#ff4500','#ff7043','#ffa726','#42a5f5','#26c6da','#66bb6a','#ab47bc'],
+            borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// ── Inspection Stats ───────────────────────────────────────
+const inspData = {{ inspection_stats | tojson }};
+new Chart(document.getElementById('inspectionChart'), {
+    type: 'pie',
+    data: {
+        labels: inspData.map(d => d.status),
+        datasets: [{ data: inspData.map(d => d.count),
+            backgroundColor: { 'Completed':'#22c55e','Failed':'#ef4444','Scheduled':'#3b82f6','Pending':'#f59e0b' }[inspData[0]?.status]
+                ? inspData.map(d => ({'Completed':'#22c55e','Failed':'#ef4444','Scheduled':'#3b82f6','Pending':'#f59e0b'}[d.status] || '#666'))
+                : ['#22c55e','#ef4444','#3b82f6','#f59e0b'],
+            borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// ── NOC Status ─────────────────────────────────────────────
+const nocData = {{ noc_status | tojson }};
+new Chart(document.getElementById('nocChart'), {
+    type: 'doughnut',
+    data: {
+        labels: nocData.map(d => d.status),
+        datasets: [{ data: nocData.map(d => d.count),
+            backgroundColor: nocData.map(d => ({'Active':'#22c55e','Expired':'#ef4444','Revoked':'#8b5cf6'}[d.status] || '#555')),
+            borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// ── Fee Collection ─────────────────────────────────────────
+const feeData = {{ fee_summary | tojson }};
+new Chart(document.getElementById('feeChart'), {
+    type: 'bar',
+    data: {
+        labels: feeData.map(d => d.status),
+        datasets: [{ label: 'Amount (₹)', data: feeData.map(d => d.total),
+            backgroundColor: feeData.map(d => ({'Paid':'rgba(34,197,94,0.8)','Unpaid':'rgba(239,68,68,0.8)','Pending':'rgba(251,191,36,0.8)'}[d.status] || '#555')),
+            borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+</body>
+</html>

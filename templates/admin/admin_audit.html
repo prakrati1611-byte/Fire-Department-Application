@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Logs | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item active">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+<main class="main-content">
+  <div class="page-header">
+    <div><h2>Audit Logs</h2><p>Full system activity log — every action recorded with actor, timestamp and context.</p></div>
+    <a href="{{ url_for('admin_export_audit') }}" class="btn-secondary">⬇ Export CSV</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="kpi-card kpi-alert"><span class="kpi-value">{{ counts.today }}</span><div class="kpi-label">Today</div></div>
+    <div class="kpi-card kpi-inspection"><span class="kpi-value">{{ counts.this_week }}</span><div class="kpi-label">This Week</div></div>
+    <div class="kpi-card kpi-approved"><span class="kpi-value">{{ counts.total }}</span><div class="kpi-label">Total Events</div></div>
+    <div class="kpi-card kpi-warn"><span class="kpi-value">{{ counts.unique_actors }}</span><div class="kpi-label">Unique Actors</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input class="filter-input" type="text" id="auditSearch" placeholder="🔍  Search actor, action, or entity…" oninput="filterAudit()">
+    <select class="filter-select" id="actionFilter" onchange="filterAudit()">
+      <option value="">All Actions</option>
+      <option>LOGIN</option><option>LOGOUT</option><option>CREATE</option>
+      <option>UPDATE</option><option>DELETE</option><option>APPROVE</option>
+      <option>REJECT</option><option>SUSPEND</option><option>ASSIGN</option>
+    </select>
+    <select class="filter-select" id="roleFilter" onchange="filterAudit()">
+      <option value="">All Roles</option>
+      <option>Admin</option><option>Officer</option><option>Applicant</option>
+    </select>
+    <input class="filter-select" type="date" id="dateFilter" onchange="filterAudit()" style="min-width:160px">
+  </div>
+
+  <div class="table-card">
+    <table class="data-table" id="auditTable">
+      <thead><tr><th>Timestamp</th><th>Actor</th><th>Role</th><th>Action</th><th>Entity</th><th>Details</th><th>IP</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr data-search="{{ log.actor|lower }} {{ log.action|lower }} {{ log.entity|lower }}"
+            data-action="{{ log.action }}" data-role="{{ log.actor_role }}"
+            data-date="{{ log.created_at.strftime('%Y-%m-%d') if log.created_at else '' }}">
+          <td style="font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--ember-bright);white-space:nowrap;font-weight:700">
+            {{ log.created_at.strftime('%d %b %Y %H:%M:%S') if log.created_at else '—' }}
+          </td>
+          <td>
+            <div class="cell-name">{{ log.actor }}</div>
+            <div class="cell-sub">{{ log.actor_email }}</div>
+          </td>
+          <td><span class="priority-badge {% if log.actor_role=='Admin' %}priority-critical{% elif log.actor_role=='Officer' %}priority-high{% else %}priority-normal{% endif %}">{{ log.actor_role }}</span></td>
+          <td>
+            <span class="status-pill
+              {% if log.action in ['APPROVE','CREATE','LOGIN'] %}status-approved
+              {% elif log.action in ['REJECT','DELETE','SUSPEND'] %}status-rejected
+              {% elif log.action in ['UPDATE','ASSIGN'] %}status-scheduled
+              {% else %}status-withdrawn{% endif %}">{{ log.action }}</span>
+          </td>
+          <td style="font-size:13px;color:var(--text-secondary)">{{ log.entity or '—' }}</td>
+          <td style="font-size:13px;color:var(--text-secondary);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ log.details or '—' }}</td>
+          <td style="font-size:12px;color:var(--text-muted);font-family:'DM Sans',monospace">{{ log.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">No audit records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:20px">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('admin_audit', page=pagination.prev_num) }}" class="btn-secondary" style="padding:8px 16px">← Prev</a>
+    {% endif %}
+    <span style="padding:8px 16px;color:var(--text-muted);font-size:14px">Page {{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+    <a href="{{ url_for('admin_audit', page=pagination.next_num) }}" class="btn-secondary" style="padding:8px 16px">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</main>
+
+<script>
+function filterAudit() {
+  const q      = document.getElementById('auditSearch').value.toLowerCase();
+  const action = document.getElementById('actionFilter').value;
+  const role   = document.getElementById('roleFilter').value;
+  const date   = document.getElementById('dateFilter').value;
+  document.querySelectorAll('#auditTable tbody tr[data-search]').forEach(r => {
+    const sm = !q      || r.dataset.search.includes(q);
+    const am = !action || r.dataset.action === action;
+    const rm = !role   || r.dataset.role === role;
+    const dm = !date   || r.dataset.date === date;
+    r.style.display = sm && am && rm && dm ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

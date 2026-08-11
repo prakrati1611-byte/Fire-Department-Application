@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My NOCs | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item active">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  <div class="page-header">
+    <div><h2>My NOC Certificates</h2><p>Download and manage your fire safety certificates</p></div>
+  </div>
+
+  {% if nocs %}
+  <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px;">
+    {% for noc in nocs %}
+    <div class="card" style="border-left:3px solid
+      {% if noc.status=='Active' %}var(--green)
+      {% elif noc.status=='Revoked' %}var(--red)
+      {% else %}var(--text-muted){% endif %};">
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:28px; margin-bottom:6px;">📜</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--text-primary);">
+            NOC #{{ noc.noc_id }}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);">Application #{{ noc.app_id }}</div>
+        </div>
+        <span class="status-pill
+          {% if noc.status=='Active' %}status-approved
+          {% elif noc.status=='Revoked' %}status-rejected
+          {% else %}status-pending{% endif %}">{{ noc.status }}</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:3px;">Issue Date</div>
+          <div style="font-size:14px;color:var(--text-primary);font-weight:500;">{{ noc.issue_date.strftime('%d %b %Y') if noc.issue_date else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:3px;">Valid Until</div>
+          <div style="font-size:14px;font-weight:700;
+            {% if noc.is_expiring %}color:var(--yellow){% else %}color:var(--text-primary){% endif %};">
+            {{ noc.validity.strftime('%d %b %Y') if noc.validity else '—' }}
+            {% if noc.is_expiring %}<span style="font-size:11px;"> ⚠️ Expiring</span>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if noc.status == 'Active' %}
+      <div style="display:flex;gap:8px;">
+        <a href="{{ url_for('applicant_download_noc', noc_id=noc.noc_id) }}"
+          class="btn-primary" style="flex:1;justify-content:center;">⬇️ Download PDF</a>
+        <a href="{{ url_for('applicant_view_application', app_id=noc.app_id) }}"
+          class="btn-action">View App</a>
+      </div>
+      {% else %}
+      <div style="padding:10px;background:var(--bg-input);border-radius:var(--radius);text-align:center;color:var(--text-muted);font-size:13px;">
+        Certificate {{ noc.status }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="text-align:center; padding:60px 40px;">
+    <div style="font-size:48px;margin-bottom:16px;">📜</div>
+    <h3 style="color:var(--text-primary);margin-bottom:8px;">No NOC Certificates Yet</h3>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">Your certificates will appear here once your applications are approved and inspections are completed.</p>
+    <a href="{{ url_for('applicant_apply') }}" class="btn-primary" style="display:inline-flex;">➕ Submit Application</a>
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOC Certificates | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item active">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}
+  <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="page-header">
+    <div><h2>NOC Certificates</h2><p>Issue, revoke, and track all NOC certificates.</p></div>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="kpi-card kpi-approved"><span class="kpi-value">{{ counts.active }}</span><div class="kpi-label">Active NOCs</div></div>
+    <div class="kpi-card kpi-warn"><span class="kpi-value">{{ counts.expiring }}</span><div class="kpi-label">Expiring (30d)</div></div>
+    <div class="kpi-card kpi-rejected"><span class="kpi-value">{{ counts.expired }}</span><div class="kpi-label">Expired</div></div>
+    <div class="kpi-card kpi-alert"><span class="kpi-value">{{ counts.revoked }}</span><div class="kpi-label">Revoked</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="filter-input" type="text" placeholder="🔍  Search NOC ID or applicant…">
+    <select class="filter-select">
+      <option value="">All Statuses</option>
+      <option>Active</option><option>Expired</option><option>Revoked</option>
+    </select>
+  </div>
+
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>NOC ID</th><th>Applicant</th><th>App ID</th><th>Issued By</th><th>Issue Date</th><th>Valid Until</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for n in nocs %}
+        <tr>
+          <td><span class="tracking-id">NOC-{{ n.noc_id }}</span></td>
+          <td><div class="cell-name">{{ n.applicant_name }}</div></td>
+          <td><span class="tracking-id">#{{ n.app_id }}</span></td>
+          <td style="font-size:13px;color:var(--text-secondary)">{{ n.issued_by or '—' }}</td>
+          <td style="font-size:13px;color:var(--text-muted)">{{ n.issue_date.strftime('%d %b %Y') if n.issue_date else '—' }}</td>
+          <td style="font-size:13px;{% if n.is_expiring %}color:var(--yellow){% else %}color:var(--text-muted){% endif %}">{{ n.valid_until.strftime('%d %b %Y') if n.valid_until else '—' }}</td>
+          <td><span class="status-pill {% if n.status=='Active' %}status-approved{% elif n.status=='Expired' %}status-rejected{% else %}status-withdrawn{% endif %}">{{ n.status }}</span></td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{{ url_for('generate_letter_pdf', noc_id=n.noc_id) }}" class="btn-action" target="_blank">⬇ PDF</a>
+              {% if n.status == 'Active' %}
+              <form method="POST" action="{{ url_for('admin_revoke_noc', noc_id=n.noc_id) }}" style="margin:0">
+                <button type="submit" class="btn-reject" onclick="return confirm('Revoke NOC-{{ n.noc_id }}?')">Revoke</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px">No NOC records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

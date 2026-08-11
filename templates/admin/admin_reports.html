@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item active">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+<main class="main-content">
+  <div class="page-header">
+    <div><h2>Reports</h2><p>Generate and export system-wide reports.</p></div>
+  </div>
+
+  <!-- Quick exports -->
+  <div class="section-title">Quick Exports</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px">
+    <div class="card" style="margin-bottom:0">
+      <h3>Applications Report</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">All applications with status, dates, and officer assignments.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="applications">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Date Range</label>
+          <select name="date_range">
+            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option><option value="365">Last year</option><option value="all">All time</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <h3>Revenue Report</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Fee collection summary with paid, pending, and waived amounts.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="revenue">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Date Range</label>
+          <select name="date_range">
+            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option><option value="365">Last year</option><option value="all">All time</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <h3>Users Report</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">All registered users with roles, statuses, and activity.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="users">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Role Filter</label>
+          <select name="role_filter">
+            <option value="all">All Roles</option><option value="Applicant">Applicant</option>
+            <option value="Officer">Officer</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <h3>NOC Report</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">All NOC certificates with issue/expiry dates and status.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="nocs">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Status Filter</label>
+          <select name="status_filter">
+            <option value="all">All</option><option value="Active">Active</option>
+            <option value="Expired">Expired</option><option value="Revoked">Revoked</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <h3>Audit Log Report</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Full system activity log for compliance and review.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="audit">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Date Range</label>
+          <select name="date_range">
+            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <h3>Officer Performance</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Applications processed, avg resolution time per officer.</p>
+      <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="officer_performance">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Date Range</label>
+          <select name="date_range">
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option><option value="365">Last year</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+      </form>
+    </div>
+    <div class="card" style="margin-bottom:0">
+    <h3>ML Risk Report</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">AI-predicted risk scores for all active applications.</p>
+    <form method="POST" action="{{ url_for('admin_export_report') }}">
+        <input type="hidden" name="report_type" value="ml_risk">
+        <div class="form-group" style="margin-bottom:12px">
+            <label>Risk Level</label>
+            <select name="risk_filter">
+                <option value="all">All Levels</option>
+                <option value="High">High Risk</option>
+                <option value="Medium">Medium Risk</option>
+                <option value="Low">Low Risk</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">⬇ Export CSV</button>
+    </form>
+</div>
+  </div>
+
+  <!-- Summary stats for current month -->
+  <div class="section-title">This Month at a Glance</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card" style="margin-bottom:0">
+      <h3>Applications by Status</h3>
+      {% for row in monthly_status %}
+      <div class="bar-row">
+        <span class="bar-label">{{ row.status }}</span>
+        <div class="bar-track"><div class="bar-fill {% if row.status=='Approved' %}green{% elif row.status=='Rejected' %}red{% elif row.status=='Scheduled' %}blue{% endif %}" style="width:{{ row.pct }}%"></div></div>
+        <span class="bar-value">{{ row.count }}</span>
+      </div>
+      <div class="card" style="margin-bottom:0">
+    <h4>ML Risk Distribution</h4>
+    {% for row in risk_distribution | default([]) %}
+    <div class="bar-row">
+        <span class="bar-label">{{ row.risk_level }}</span>
+        <div class="bar-track">
+            <div class="bar-fill {% if row.risk_level=='High' %}red{% elif row.risk_level=='Medium' %}yellow{% else %}green{% endif %}"
+                 style="width:{{ row.pct }}%"></div>
+        </div>
+        <span class="bar-value">{{ row.count }}</span>
+    </div>
+    {% else %}
+    <p style="font-size:13px;color:var(--text-muted)">No ML data yet.</p>
+    {% endfor %}
+</div>
+      {% endfor %}
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <h5>Revenue This Month</h5>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:var(--text-secondary)">Collected</span>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--green)">₹{{ '{:,.0f}'.format(monthly_revenue.collected) }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:var(--text-secondary)">Pending</span>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--yellow)">₹{{ '{:,.0f}'.format(monthly_revenue.pending) }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:var(--text-secondary)">Waived</span>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--text-muted)">₹{{ '{:,.0f}'.format(monthly_revenue.waived) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item active">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}
+  <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="page-header">
+    <div><h2>System Settings</h2><p>Configure fees, NOC validity, notifications, and system behaviour.</p></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-link active" onclick="switchTab('fees',this)">💰 Fee Structure</button>
+    <button class="tab-link" onclick="switchTab('noc',this)">📜 NOC Settings</button>
+    <button class="tab-link" onclick="switchTab('notifications',this)">🔔 Notifications</button>
+    <button class="tab-link" onclick="switchTab('security',this)">🔒 Security</button>
+  </div>
+
+  <!-- Fee Structure -->
+  <div class="tab-content active" id="tab-fees">
+    <div class="card">
+      <h3>Application Fee Structure</h3>
+      <form method="POST" action="{{ url_for('admin_save_settings') }}">
+        <input type="hidden" name="section" value="fees">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>NOC Request Fee (₹)</label>
+            <input type="number" name="fee_noc" value="{{ settings.fee_noc or 500 }}" min="0">
+          </div>
+          <div class="form-group">
+            <label>Fire Safety Inspection Fee (₹)</label>
+            <input type="number" name="fee_inspection" value="{{ settings.fee_inspection or 1000 }}" min="0">
+          </div>
+          <div class="form-group">
+            <label>License Renewal Fee (₹)</label>
+            <input type="number" name="fee_renewal" value="{{ settings.fee_renewal or 750 }}" min="0">
+          </div>
+          <div class="form-group">
+            <label>Late Penalty (₹/day)</label>
+            <input type="number" name="fee_late" value="{{ settings.fee_late or 50 }}" min="0">
+          </div>
+          <div class="form-group">
+            <label>Waiver Eligibility (days overdue)</label>
+            <input type="number" name="waiver_days" value="{{ settings.waiver_days or 30 }}" min="1">
+          </div>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save Fee Settings</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NOC Settings -->
+  <div class="tab-content" id="tab-noc">
+    <div class="card">
+      <h3>NOC Certificate Settings</h3>
+      <form method="POST" action="{{ url_for('admin_save_settings') }}">
+        <input type="hidden" name="section" value="noc">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Default NOC Validity (months)</label>
+            <input type="number" name="noc_validity_months" value="{{ settings.noc_validity_months or 12 }}" min="1">
+          </div>
+          <div class="form-group">
+            <label>Expiry Warning Lead (days)</label>
+            <input type="number" name="noc_warn_days" value="{{ settings.noc_warn_days or 30 }}" min="1">
+          </div>
+          <div class="form-group">
+            <label>Auto-revoke After Expiry (days)</label>
+            <input type="number" name="noc_autorevoke" value="{{ settings.noc_autorevoke or 0 }}" min="0">
+            <small style="color:var(--text-muted);font-size:11px">Set 0 to disable auto-revoke</small>
+          </div>
+          <div class="form-group">
+            <label>NOC ID Prefix</label>
+            <input type="text" name="noc_prefix" value="{{ settings.noc_prefix or 'FD-NOC' }}">
+          </div>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save NOC Settings</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="tab-content" id="tab-notifications">
+    <div class="card">
+      <h3>Notification Settings</h3>
+      <form method="POST" action="{{ url_for('admin_save_settings') }}">
+        <input type="hidden" name="section" value="notifications">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          {% set toggles = [
+            ('notif_app_submitted',  'Notify applicant on submission'),
+            ('notif_app_approved',   'Notify applicant on approval'),
+            ('notif_app_rejected',   'Notify applicant on rejection'),
+            ('notif_inspection',     'Notify on inspection scheduled'),
+            ('notif_noc_expiry',     'Notify on NOC expiry warning'),
+            ('notif_fee_due',        'Notify on fee due'),
+            ('notif_officer_assign', 'Notify officer on assignment'),
+          ] %}
+          {% for key, label in toggles %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:14px;color:var(--text-secondary)">{{ label }}</span>
+            <label style="display:flex;align-items:center;gap:8px;margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-secondary)">
+              <input type="checkbox" name="{{ key }}" {% if settings.get(key, True) %}checked{% endif %} style="width:auto;margin:0">
+              Enabled
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save Notification Settings</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Security -->
+  <div class="tab-content" id="tab-security">
+    <div class="card">
+      <h3>Security & Access</h3>
+      <form method="POST" action="{{ url_for('admin_save_settings') }}">
+        <input type="hidden" name="section" value="security">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Session Timeout (minutes)</label>
+            <input type="number" name="session_timeout" value="{{ settings.session_timeout or 60 }}" min="5">
+          </div>
+          <div class="form-group">
+            <label>Max Login Attempts</label>
+            <input type="number" name="max_login_attempts" value="{{ settings.max_login_attempts or 5 }}" min="1">
+          </div>
+          <div class="form-group">
+            <label>Lockout Duration (minutes)</label>
+            <input type="number" name="lockout_minutes" value="{{ settings.lockout_minutes or 30 }}" min="1">
+          </div>
+          <div class="form-group">
+            <label>Password Min Length</label>
+            <input type="number" name="password_min_len" value="{{ settings.password_min_len or 8 }}" min="6">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px">
+          <label style="text-transform:none;letter-spacing:0;font-size:14px;font-weight:600;color:var(--text-secondary)">
+            <input type="checkbox" name="require_2fa" {% if settings.get('require_2fa') %}checked{% endif %} style="width:auto;margin-right:8px">
+            Require 2FA for Admin accounts
+          </label>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save Security Settings</button></div>
+      </form>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card" style="border-color:var(--red-rim)">
+      <h3 style="color:var(--red)">⚠ Danger Zone</h3>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--red-dim);border:1px solid var(--red-rim);border-radius:var(--radius)">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary)">Clear Audit Logs</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Permanently delete all audit records older than 90 days.</div>
+          </div>
+          <form method="POST" action="{{ url_for('admin_clear_old_audit') }}" style="margin:0">
+            <button type="submit" class="btn-reject" onclick="return confirm('Delete audit logs older than 90 days? This cannot be undone.')">Clear Old Logs</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fee Management | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item active">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}
+  <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="page-header">
+    <div><h2>Fee Management</h2><p>Track, update, and reconcile all application fees.</p></div>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="kpi-card kpi-approved"><span class="kpi-value">₹{{ '{:,.0f}'.format(summary.collected) }}</span><div class="kpi-label">Collected</div></div>
+    <div class="kpi-card kpi-warn"><span class="kpi-value">₹{{ '{:,.0f}'.format(summary.pending) }}</span><div class="kpi-label">Pending</div></div>
+    <div class="kpi-card kpi-rejected"><span class="kpi-value">₹{{ '{:,.0f}'.format(summary.waived) }}</span><div class="kpi-label">Waived</div></div>
+    <div class="kpi-card kpi-noc"><span class="kpi-value">{{ summary.total_txns }}</span><div class="kpi-label">Transactions</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="filter-input" type="text" placeholder="🔍  Search applicant or ID…">
+    <select class="filter-select">
+      <option value="">All Statuses</option>
+      <option>Paid</option><option>Pending</option><option>Waived</option><option>Overdue</option>
+    </select>
+  </div>
+
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Txn ID</th><th>Applicant</th><th>App ID</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Paid On</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for f in fees %}
+        <tr class="{% if f.status=='Overdue' %}row-overdue{% endif %}">
+          <td><span class="tracking-id">#{{ f.ledger_id }}</span></td>
+          <td><div class="cell-name">{{ f.applicant_name }}</div></td>
+          <td><span class="tracking-id">#{{ f.app_id }}</span></td>
+          <td style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-primary);font-size:16px">₹{{ '{:,.0f}'.format(f.amount) }}</td>
+          <td><span class="status-pill {% if f.status=='Paid' %}status-approved{% elif f.status=='Pending' %}status-pending{% elif f.status=='Overdue' %}status-rejected{% else %}status-withdrawn{% endif %}">{{ f.status }}</span></td>
+          <td style="font-size:13px;color:var(--text-muted)">{{ f.due_date.strftime('%d %b %Y') if f.due_date else '—' }}</td>
+          <td style="font-size:13px;color:var(--text-muted)">{{ f.paid_on.strftime('%d %b %Y') if f.paid_on else '—' }}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              {% if f.status != 'Paid' %}
+              <form method="POST" action="{{ url_for('admin_mark_paid', ledger_id=f.ledger_id) }}" style="margin:0">
+                <button type="submit" class="btn-approve">Mark Paid</button>
+              </form>
+              <form method="POST" action="{{ url_for('admin_waive_fee', ledger_id=f.ledger_id) }}" style="margin:0">
+                <button type="submit" class="btn-action" onclick="return confirm('Waive this fee?')">Waive</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px">No fee records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

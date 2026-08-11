@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspections | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item active">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  <div class="page-header">
+    <div><h2>Inspection Schedule</h2><p>Track upcoming and past inspections for your applications</p></div>
+  </div>
+
+  {% if upcoming %}
+  <div class="card" style="border-top:2px solid var(--blue); margin-bottom:16px;">
+    <h3 style="color:var(--blue); margin-bottom:14px;">🗓️ Upcoming Inspections</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px;">
+      {% for ins in upcoming %}
+      <div style="padding:16px; background:var(--bg-input); border:1px solid var(--blue-rim); border-radius:var(--radius);">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:var(--blue);">
+          {{ ins.date.strftime('%d %b') if ins.date else '—' }}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">{{ ins.date.strftime('%A, %Y') if ins.date else '' }}</div>
+        <div style="margin-top:10px;font-size:13px;color:var(--text-secondary);">App #{{ ins.app_id }}</div>
+        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">Officer: {{ ins.officer_name or 'TBA' }}</div>
+        <span class="status-pill status-{{ ins.status|lower }}" style="margin-top:8px;display:inline-flex;">{{ ins.status }}</span>
+        {% if ins.remarks %}
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px;font-style:italic;">"{{ ins.remarks }}"</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="table-card">
+    <div style="padding:18px 20px 0;"><span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em;">All Inspections</span></div>
+    <table class="data-table" style="margin-top:10px;">
+      <thead><tr><th>Inspection ID</th><th>Application</th><th>Date</th><th>Officer</th><th>Status</th><th>Remarks</th></tr></thead>
+      <tbody>
+        {% for ins in inspections %}
+        <tr>
+          <td><span class="tracking-id">#{{ ins.inspection_id }}</span></td>
+          <td><a href="{{ url_for('applicant_view_application', app_id=ins.app_id) }}" style="color:var(--ember);">App #{{ ins.app_id }}</a></td>
+          <td>{{ ins.date.strftime('%d %b %Y') if ins.date else '—' }}</td>
+          <td>{{ ins.officer_name or '—' }}</td>
+          <td><span class="status-pill status-{{ ins.status|lower }}">{{ ins.status }}</span></td>
+          <td style="max-width:200px;font-size:13px;color:var(--text-muted);">{{ ins.remarks or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;">No inspections scheduled yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:14px; background:var(--bg-input);">
+    <h3>📋 Inspection Tips</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px;">
+      {% for tip in [
+        ('🚪','Ensure access','Make sure all areas of the premises are accessible to the officer.'),
+        ('📋','Prepare documents','Keep building plans and previous NOCs ready.'),
+        ('🔥','Check equipment','Ensure fire extinguishers and alarms are functional.'),
+        ('📞','Be available','Be present or have a representative available on the inspection day.')
+      ] %}
+      <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);">
+        <div style="font-size:22px;margin-bottom:6px;">{{ tip[0] }}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{{ tip[1] }}</div>
+        <div style="font-size:12px;color:var(--text-muted);">{{ tip[2] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+</body>
+</html>

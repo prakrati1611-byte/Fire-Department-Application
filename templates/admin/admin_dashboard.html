@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Fire Dept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔥</span>
+    <div>
+      <div class="brand-name">Fire Dept</div>
+      <div class="brand-sub">Admin Portal</div>
+    </div>
+  </div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item">📋 All Applications</a>
+
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a>
+  </div>
+</aside>
+
+<main class="main-content">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span>
+        <span class="flash-text">{{ msg }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <h2>Admin Overview</h2>
+      <p>System-wide statistics and controls — {{ now.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div class="header-meta">
+      <span class="live-dot"></span>
+      <span style="font-size:12px;color:var(--text-muted)">Live</span>
+    </div>
+  </div>
+
+  <!-- ── KPI Row 1: Users & Apps ── -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card kpi-approved">
+      <span class="kpi-icon">👥</span>
+      <span class="kpi-value">{{ stats.total_users }}</span>
+      <div class="kpi-label">Total Users</div>
+      <a href="{{ url_for('admin_users') }}" class="kpi-link">Manage →</a>
+    </div>
+    <div class="kpi-card kpi-inspection">
+      <span class="kpi-icon">🛡️</span>
+      <span class="kpi-value">{{ stats.total_officers }}</span>
+      <div class="kpi-label">Officers</div>
+    </div>
+    <div class="kpi-card kpi-pending">
+      <span class="kpi-icon">📋</span>
+      <span class="kpi-value">{{ stats.pending_apps }}</span>
+      <div class="kpi-label">Pending Apps</div>
+      <a href="{{ url_for('admin_applications') }}?status=Pending" class="kpi-link">Review →</a>
+    </div>
+    <div class="kpi-card kpi-alert">
+      <span class="kpi-icon">🚫</span>
+      <span class="kpi-value">{{ stats.suspended_users }}</span>
+      <div class="kpi-label">Suspended</div>
+    </div>
+  </div>
+
+  <!-- ── KPI Row 2: Finance ── -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card kpi-approved">
+      <span class="kpi-icon">💰</span>
+      <span class="kpi-value">₹{{ '{:,.0f}'.format(stats.revenue_collected) }}</span>
+      <div class="kpi-label">Revenue Collected</div>
+      <a href="{{ url_for('admin_fees') }}" class="kpi-link">View →</a>
+    </div>
+    <div class="kpi-card kpi-warn">
+      <span class="kpi-icon">⏳</span>
+      <span class="kpi-value">₹{{ '{:,.0f}'.format(stats.revenue_pending) }}</span>
+      <div class="kpi-label">Fees Pending</div>
+    </div>
+    <div class="kpi-card kpi-noc">
+      <span class="kpi-icon">📜</span>
+      <span class="kpi-value">{{ stats.nocs_issued }}</span>
+      <div class="kpi-label">NOCs Issued</div>
+      <a href="{{ url_for('admin_nocs') }}" class="kpi-link">View →</a>
+    </div>
+    <div class="kpi-card kpi-rejected">
+      <span class="kpi-icon">⚠️</span>
+      <span class="kpi-value">{{ stats.nocs_expiring }}</span>
+      <div class="kpi-label">NOCs Expiring (30d)</div>
+    </div>
+  </div>
+
+  <!-- ── Two column: Recent Activity + Quick Actions ── -->
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-top:8px">
+
+    <!-- Recent Applications -->
+    <div class="table-card">
+      <div style="padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em">Recent Applications</span>
+        <a href="{{ url_for('admin_applications') }}" class="kpi-link">View all →</a>
+      </div>
+      <table class="data-table" style="margin-top:10px">
+        <thead><tr>
+          <th>ID</th><th>Applicant</th><th>Type</th><th>Status</th><th>Date</th><th>Action</th>
+        </tr></thead>
+        <tbody>
+          {% for app in recent_apps %}
+          <tr>
+            <td><span class="tracking-id">#{{ app.app_id }}</span></td>
+            <td><div class="cell-name">{{ app.applicant_name }}</div></td>
+            <td>{{ app.type }}</td>
+            <td><span class="status-pill status-{{ app.status|lower }}">{{ app.status }}</span></td>
+            <td>{{ app.date_submitted.strftime('%d %b') if app.date_submitted else '—' }}</td>
+            <td>
+              <a href="{{ url_for('admin_view_application', app_id=app.app_id) }}" class="btn-action">View</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">No applications yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="margin-bottom:0">
+        <h3>Quick Actions</h3>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <a href="{{ url_for('admin_announcements') }}" class="btn-primary" style="justify-content:flex-start;gap:10px">📢 Send Announcement</a>
+          <a href="{{ url_for('admin_users') }}?role=Officer" class="btn-secondary" style="justify-content:flex-start;gap:10px">🛡️ Add Officer</a>
+          <a href="{{ url_for('admin_reports') }}" class="btn-secondary" style="justify-content:flex-start;gap:10px">📈 Generate Report</a>
+          <a href="{{ url_for('admin_audit') }}" class="btn-secondary" style="justify-content:flex-start;gap:10px">🔍 View Audit Log</a>
+        </div>
+      </div>
+
+      <!-- Recent Audit -->
+      <div class="card" style="margin-bottom:0;flex:1">
+        <h3>Recent Activity</h3>
+        <div class="audit-timeline">
+          {% for log in recent_audit %}
+          <div class="audit-item">
+            <span class="audit-time">{{ log.created_at.strftime('%H:%M') if log.created_at else '' }}</span>
+            <p><strong>{{ log.actor }}</strong> {{ log.action }}</p>
+          </div>
+          {% else %}
+          <p style="color:var(--text-muted);font-size:13px">No recent activity.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

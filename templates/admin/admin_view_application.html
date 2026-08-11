@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application #{{ app.app_id }} | Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔥</span>
+    <div>
+      <div class="brand-name">Fire Dept</div>
+      <div class="brand-sub">Admin Portal</div>
+    </div>
+  </div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item active">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a>
+  </div>
+</aside>
+
+<main class="main-content">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span>
+        <span class="flash-text">{{ msg }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="{{ url_for('admin_applications') }}" class="btn-action" style="padding:7px 14px;">← Back</a>
+      <div>
+        <h2>Application #{{ app.app_id }}</h2>
+        <p>{{ app.type }} — submitted {{ app.date_submitted }}</p>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span class="status-pill status-{{ app.status | lower }}">{{ app.status }}</span>
+      {% if app.tracking_id %}
+        <span class="tracking-id">{{ app.tracking_id }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div style="display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start;">
+
+    <!-- LEFT -->
+    <div style="display:flex; flex-direction:column; gap:14px;">
+
+      <!-- Applicant Info -->
+      <div class="card">
+        <h3>👤 Applicant Information</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; margin-top:10px;">
+          <div>
+            <div class="field-label">Full Name</div>
+            <div class="field-value">{{ app.applicant_name }}</div>
+          </div>
+          <div>
+            <div class="field-label">Email</div>
+            <div class="field-value">{{ app.applicant_email }}</div>
+          </div>
+          <div>
+            <div class="field-label">Application Type</div>
+            <div class="field-value">{{ app.type }}</div>
+          </div>
+          <div>
+            <div class="field-label">Date Submitted</div>
+            <div class="field-value">{{ app.date_submitted }}</div>
+          </div>
+          {% if app.location %}
+          <div style="grid-column:1/-1;">
+            <div class="field-label">Location / Address</div>
+            <div class="field-value">{{ app.location }}</div>
+          </div>
+          {% endif %}
+          {% if app.building_type %}
+          <div>
+            <div class="field-label">Building Type</div>
+            <div class="field-value">{{ app.building_type }}</div>
+          </div>
+          {% endif %}
+          {% if app.priority_level %}
+          <div>
+            <div class="field-label">Priority</div>
+            <div class="field-value" style="font-weight:700;
+              {% if app.priority_level == 'High' %}color:var(--yellow){% elif app.priority_level == 'Urgent' %}color:var(--red){% endif %}">
+              {{ app.priority_level }}
+            </div>
+          </div>
+          {% endif %}
+          {% if app.preferred_date %}
+          <div>
+            <div class="field-label">Preferred Inspection Date</div>
+            <div class="field-value">{{ app.preferred_date }}</div>
+          </div>
+          {% endif %}
+          {% if app.preferred_time %}
+          <div>
+            <div class="field-label">Preferred Time</div>
+            <div class="field-value">{{ app.preferred_time }}</div>
+          </div>
+          {% endif %}
+        </div>
+        {% if app.description %}
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+          <div class="field-label">Description / Notes</div>
+          <p style="margin-top:6px; font-size:14px; color:var(--text-secondary); line-height:1.65;">{{ app.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Assigned Officer -->
+      <div class="card">
+        <h3>🚒 Assigned Officer</h3>
+        {% if app.officer_name %}
+        <div class="user-mini" style="margin:12px 0;">
+          <div class="mini-avatar officer">{{ app.officer_name[0] }}</div>
+          <div>
+            <div style="font-weight:600; color:var(--text-primary);">{{ app.officer_name }}</div>
+            <div style="font-size:12px; color:var(--text-muted);">Currently assigned</div>
+          </div>
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted); font-size:14px; margin:10px 0;">⚠️ No officer assigned yet.</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('admin_assign_officer', app_id=app.app_id) }}">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+            <select name="officer_id" style="flex:1; min-width:180px; padding:8px 12px;
+              background:var(--bg-input); border:1px solid var(--border-mid);
+              border-radius:var(--radius); color:var(--text-primary); font-size:14px;">
+              <option value="">— Select Officer —</option>
+              {% for o in officers %}
+              <option value="{{ o.user_id }}" {% if app.assigned_officer == o.user_id %}selected{% endif %}>
+                {{ o.name }}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn-primary" style="padding:8px 18px; white-space:nowrap;">Assign</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Documents -->
+      <div class="card">
+        <h3>📎 Uploaded Documents
+          <span style="font-size:12px; color:var(--text-muted); font-weight:400;">({{ docs|length }} file{{ 's' if docs|length != 1 }})</span>
+        </h3>
+        {% if docs %}
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+          {% for doc in docs %}
+          <div style="display:flex; align-items:center; justify-content:space-between;
+            padding:10px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:22px;">
+                {% if doc.doc_type and doc.doc_type.lower() == 'pdf' %}📄
+                {% elif doc.doc_type and doc.doc_type.lower() in ['jpg','jpeg','png'] %}🖼️
+                {% else %}📁{% endif %}
+              </span>
+              <div>
+                <div style="font-size:14px; font-weight:600; color:var(--text-primary);">{{ doc.doc_name or 'Document' }}</div>
+                <div style="font-size:11px; color:var(--text-muted);">
+                  {% if doc.doc_type %}{{ doc.doc_type | upper }}{% endif %}
+                  {% if doc.uploaded_at %}&bull; {{ doc.uploaded_at.strftime('%d %b %Y') }}{% endif %}
+                </div>
+              </div>
+            </div>
+            {% if doc.file_path %}
+            <a href="{{ url_for('static', filename=doc.file_path) }}" target="_blank" class="btn-action">View</a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted); font-size:14px; text-align:center; padding:24px 0;">No documents uploaded for this application.</p>
+        {% endif %}
+      </div>
+
+    </div><!-- /LEFT -->
+
+    <!-- RIGHT -->
+    <div style="display:flex; flex-direction:column; gap:14px; position:sticky; top:80px;">
+
+      <!-- Status Actions -->
+      <div class="card" style="border-top:2px solid #a855f7;">
+        <h3 style="color:#c084fc;">⚡ Status Actions</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+          {% if app.status == 'Pending' %}
+            <button class="btn-primary" style="justify-content:center; width:100%;
+              background:linear-gradient(135deg,#15803d,#166534); box-shadow:0 4px 12px rgba(21,128,61,0.3);"
+              onclick="submitAction('approve')">✅ Approve Application</button>
+            <button class="btn-secondary" style="justify-content:center; width:100%; color:var(--yellow); border-color:var(--yellow-rim);"
+              onclick="submitAction('schedule')">📅 Schedule Inspection</button>
+            <button class="btn-secondary" style="justify-content:center; width:100%; color:var(--red); border-color:var(--red-rim);"
+              onclick="if(confirm('Reject this application?')) submitAction('reject')">❌ Reject Application</button>
+          {% elif app.status == 'Approved' %}
+            <div style="padding:12px; background:var(--green-dim); border:1px solid var(--green-rim);
+              border-radius:var(--radius); text-align:center; color:var(--green); font-weight:700; font-size:13px;">
+              ✅ Application Approved
+            </div>
+          {% elif app.status == 'Rejected' %}
+            <div style="padding:12px; background:var(--red-dim); border:1px solid var(--red-rim);
+              border-radius:var(--radius); text-align:center; color:var(--red); font-weight:700; font-size:13px;">
+              ❌ Application Rejected
+            </div>
+          {% else %}
+            <div style="padding:12px; background:var(--bg-input); border:1px solid var(--border);
+              border-radius:var(--radius); text-align:center; color:var(--text-muted); font-size:13px;">
+              Status: {{ app.status }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- App Meta -->
+      <div class="card">
+        <h3>📋 Details</h3>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
+          <div>
+            <div class="field-label">App ID</div>
+            <div class="tracking-id" style="font-size:16px;">#{{ app.app_id }}</div>
+          </div>
+          {% if app.tracking_id %}
+          <div>
+            <div class="field-label">Tracking ID</div>
+            <div class="tracking-id">{{ app.tracking_id }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div class="field-label">Current Status</div>
+            <span class="status-pill status-{{ app.status | lower }}">{{ app.status }}</span>
+          </div>
+          <div>
+            <div class="field-label">Inspection Score</div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:24px; font-weight:700;
+              color:{% if app.inspection_score and app.inspection_score >= 80 %}var(--green)
+                    {% elif app.inspection_score and app.inspection_score >= 50 %}var(--yellow)
+                    {% elif app.inspection_score %}var(--red)
+                    {% else %}var(--text-muted){% endif %};">
+              {% if app.inspection_score %}{{ app.inspection_score }}/100{% else %}—{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="card">
+        <h3>🔗 Quick Links</h3>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+          <a href="{{ url_for('admin_applications') }}" class="btn-secondary" style="justify-content:flex-start;">← All Applications</a>
+          <a href="{{ url_for('admin_fees') }}" class="btn-secondary" style="justify-content:flex-start;">💰 Fee Ledger</a>
+          <a href="{{ url_for('admin_nocs') }}" class="btn-secondary" style="justify-content:flex-start;">📜 NOC Certificates</a>
+          <a href="{{ url_for('admin_audit') }}" class="btn-secondary" style="justify-content:flex-start;">🔍 Audit Log</a>
+        </div>
+      </div>
+
+    </div><!-- /RIGHT -->
+
+  </div>
+</main>
+
+<style>
+.field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.field-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+</style>
+
+<script>
+function submitAction(action) {
+  const urls = {
+    approve:  "{{ url_for('admin_approve_application',  app_id=app.app_id) if config.get('TESTING') else '#' }}",
+    reject:   "{{ url_for('admin_reject_application',   app_id=app.app_id) if config.get('TESTING') else '#' }}",
+    schedule: "{{ url_for('admin_schedule_inspection',  app_id=app.app_id) if config.get('TESTING') else '#' }}"
+  };
+  const url = urls[action];
+  if (!url || url === '#') {
+    alert('This action route has not been set up in app.py yet.');
+    return;
+  }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+
+</body>
+</html>

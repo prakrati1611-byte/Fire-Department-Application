@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Alerts | Fire Dept</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🔥</span>
+        <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Officer Portal</div></div>
+    </div>
+    <nav>
+        <div class="nav-section">
+            <p class="nav-label">Command</p>
+            <a href="{{ url_for('officer_dashboard') }}" class="nav-item"><span class="nav-icon">⚡</span> Dashboard</a>
+            <a href="{{ url_for('alerts_page') }}" class="nav-item active"><span class="nav-icon">🚨</span> Live Alerts</a>
+        </div>
+        <div class="nav-section">
+            <p class="nav-label">Operations</p>
+            <a href="{{ url_for('application_queue') }}" class="nav-item"><span class="nav-icon">📋</span> Application Queue</a>
+            <a href="{{ url_for('officer_inspections') }}" class="nav-item"><span class="nav-icon">🔍</span> Inspections</a>
+            <a href="{{ url_for('officer_analytics') }}" class="nav-item"><span class="nav-icon">📊</span> Analytics</a>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="btn-logout">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+    <div class="page-header">
+        <div>
+            <h2>Live Alert Feed</h2>
+            <p>Auto-refreshes every 15 seconds. Sourced from IoT devices, applications, inspections &amp; NOCs.</p>
+        </div>
+        <div class="header-meta">
+            <span class="live-dot"></span>
+            <span id="lastRefresh" style="font-size:12px;color:var(--text-muted)">Fetching…</span>
+        </div>
+    </div>
+
+    <!-- Summary bar -->
+    <div class="alert-summary">
+        <div class="alert-sum-item sum-critical">
+            <span id="countCritical">—</span>
+            <span>Critical</span>
+        </div>
+        <div class="alert-sum-item sum-warning">
+            <span id="countWarning">—</span>
+            <span>Warning</span>
+        </div>
+        <div class="alert-sum-item sum-info">
+            <span id="countInfo">—</span>
+            <span>Info</span>
+        </div>
+        <div class="alert-sum-item sum-total">
+            <span id="countTotal">—</span>
+            <span>Total Alerts</span>
+        </div>
+    </div>
+
+    <!-- Category filter tabs -->
+    <div class="alert-filter-tabs" id="filterTabs">
+        <button class="alert-tab active" data-cat="all">All</button>
+        <button class="alert-tab" data-cat="IOT">📡 IoT</button>
+        <button class="alert-tab" data-cat="SLA">⏱️ SLA Breach</button>
+        <button class="alert-tab" data-cat="Inspection">🔥 Inspection</button>
+        <button class="alert-tab" data-cat="NOC">📋 NOC Expiry</button>
+        <button class="alert-tab" data-cat="Follow-up">🔔 Follow-ups</button>
+    </div>
+
+    <!-- Alert feed -->
+    <div id="alertFeed" class="alert-feed">
+        <div class="alert-loading">
+            <div class="pulse-ring"></div>
+            <span>Loading alerts…</span>
+        </div>
+    </div>
+
+    <div id="noAlerts" class="empty-state" style="display:none">
+        <span style="font-size:40px;opacity:0.3">✅</span>
+        <p>No active alerts. All systems nominal.</p>
+    </div>
+</main>
+
+<script>
+let allAlerts = [];
+let activeCategory = 'all';
+
+// Category filter
+document.querySelectorAll('.alert-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.alert-tab').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        activeCategory = this.dataset.cat;
+        renderAlerts();
+    });
+});
+
+function renderAlerts() {
+    const feed = document.getElementById('alertFeed');
+    const filtered = activeCategory === 'all'
+        ? allAlerts
+        : allAlerts.filter(a => a.category === activeCategory);
+
+    if (filtered.length === 0) {
+        feed.innerHTML = '';
+        document.getElementById('noAlerts').style.display = 'block';
+        return;
+    }
+    document.getElementById('noAlerts').style.display = 'none';
+
+    feed.innerHTML = filtered.map(a => `
+        <div class="alert-card alert-${a.severity}" data-cat="${a.category}">
+            <div class="alert-icon">${a.icon}</div>
+            <div class="alert-body">
+                <div class="alert-title">${a.title}</div>
+                <div class="alert-detail">${a.detail}</div>
+            </div>
+            <div class="alert-meta">
+                <span class="alert-cat-badge cat-${a.category.toLowerCase().replace(/\s/g,'-')}">${a.category}</span>
+                <span class="alert-time">${formatTime(a.time)}</span>
+            </div>
+            <div class="severity-stripe"></div>
+        </div>
+    `).join('');
+}
+
+function formatTime(t) {
+    if (!t) return '';
+    const d = new Date(t);
+    if (isNaN(d)) return t;
+    return d.toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+function fetchAlerts() {
+    fetch('/officer/api/alerts')
+        .then(r => r.json())
+        .then(data => {
+            allAlerts = data.alerts || [];
+
+            // Counts
+            document.getElementById('countCritical').textContent = allAlerts.filter(a => a.severity === 'critical').length;
+            document.getElementById('countWarning').textContent  = allAlerts.filter(a => a.severity === 'warning').length;
+            document.getElementById('countInfo').textContent     = allAlerts.filter(a => a.severity === 'info').length;
+            document.getElementById('countTotal').textContent    = allAlerts.length;
+
+            document.getElementById('lastRefresh').textContent =
+                'Last refresh: ' + new Date().toLocaleTimeString('en-IN');
+
+            renderAlerts();
+        })
+        .catch(() => {
+            document.getElementById('alertFeed').innerHTML =
+                '<div class="empty-state"><span style="font-size:32px;opacity:0.3">⚠️</span><p>Could not reach server. Retrying…</p></div>';
+        });
+}
+
+fetchAlerts();
+setInterval(fetchAlerts, 15000); // poll every 15s
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item active">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>Messages</h2><p>Communicate with your assigned officer</p></div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 320px; gap:16px; align-items:start;">
+
+    <!-- Left: Message Thread + Send Form -->
+    <div>
+      <div class="table-card" style="margin-bottom:14px;">
+        <div style="padding:18px 20px 0;"><span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em;">Message History</span></div>
+        <div style="padding:12px 20px; display:flex; flex-direction:column; gap:10px;">
+          {% for msg in messages_list %}
+          <div style="display:flex; {% if msg.sender_id == session.user_id %}justify-content:flex-end{% endif %};">
+            <div style="max-width:75%; padding:12px 16px; border-radius:12px;
+              {% if msg.sender_id == session.user_id %}
+                background:linear-gradient(135deg,var(--ember),#8b1a00); color:#fff; border-bottom-right-radius:4px;
+              {% else %}
+                background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-bottom-left-radius:4px;
+              {% endif %}">
+              <div style="font-size:11px; font-weight:700; margin-bottom:4px;
+                {% if msg.sender_id == session.user_id %}color:rgba(255,255,255,0.7){% else %}color:var(--text-muted){% endif %};">
+                {% if msg.sender_id == session.user_id %}You{% else %}{{ msg.sender_name or 'Officer' }}{% endif %}
+                &bull; {{ msg.created_at.strftime('%d %b, %H:%M') if msg.created_at else '' }}
+              </div>
+              {% if msg.subject %}<div style="font-size:13px;font-weight:700;margin-bottom:4px;">{{ msg.subject }}</div>{% endif %}
+              <div style="font-size:13px;line-height:1.55;">{{ msg.message }}</div>
+            </div>
+          </div>
+          {% else %}
+          <div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:14px;">No messages yet. Send a message to your officer below.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Reply / New Message form -->
+      <div class="card">
+        <h3>✉️ Send Message</h3>
+        <form method="POST" action="{{ url_for('applicant_send_message') }}" style="margin-top:14px;">
+          <div class="form-group">
+            <label class="form-label">Application (optional)</label>
+            <select name="app_id" class="form-control">
+              <option value="">— General inquiry —</option>
+              {% for app in apps %}
+              <option value="{{ app.app_id }}">App #{{ app.app_id }} — {{ app.type }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input type="text" name="subject" class="form-control" placeholder="e.g. Question about inspection date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message *</label>
+            <textarea name="message" class="form-control" rows="4" required
+              placeholder="Type your message here…" style="resize:vertical;"></textarea>
+          </div>
+          <button type="submit" class="btn-primary">Send Message →</button>
+        </form>
+      </div>
+    </div>  <!-- ✅ this closing div was MISSING in your file -->
+
+    <!-- Right: status badges -->
+    <div style="position:sticky; top:80px; display:flex; flex-direction:column; gap:14px;">
+      <div class="card">
+        <h3>📊 Message Stats</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+          {% for label, val in [('Total Messages', msg_stats.total), ('Unread', msg_stats.unread), ('Responded', msg_stats.responded)] %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;color:var(--text-secondary);">{{ label }}</span>
+            <span style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--text-primary);">{{ val }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card" style="background:var(--bg-input);">
+        <h3>💡 Tips</h3>
+        <ul style="font-size:13px;color:var(--text-muted);padding-left:16px;margin-top:10px;line-height:1.9;">
+          <li>Reference your App ID when messaging</li>
+          <li>Responses are usually within 1-2 days</li>
+          <li>For urgent matters, visit the office directly</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

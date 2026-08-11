@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Applications | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item active">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>My Applications</h2><p>Track the status of all your NOC applications</p></div>
+    <a href="{{ url_for('applicant_apply') }}" class="btn-primary">➕ New Application</a>
+  </div>
+
+  <!-- Status filter tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+    {% set statuses = [('all','All'), ('Pending','Pending'), ('Approved','Approved'), ('Rejected','Rejected'), ('Scheduled','Scheduled'), ('Withdrawn','Withdrawn')] %}
+    {% for val, label in statuses %}
+    <a href="?status={{ val }}" style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600;
+      text-decoration:none; border:1px solid var(--border-mid);
+      {% if request.args.get('status','all') == val %}background:var(--ember);color:#fff;border-color:var(--ember);{% else %}color:var(--text-secondary);background:transparent;{% endif %}">
+      {{ label }}
+      {% if val == 'all' %}({{ apps|length }}){% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr>
+        <th>App ID</th><th>Type</th><th>Location</th><th>Submitted</th><th>Status</th><th>Officer</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        {% for app in apps %}
+        {% if request.args.get('status','all') == 'all' or app.status == request.args.get('status') %}
+        <tr>
+          <td><span class="tracking-id">#{{ app.app_id }}</span>
+            {% if app.tracking_id %}<br><span style="font-size:11px;color:var(--text-muted);">{{ app.tracking_id }}</span>{% endif %}
+          </td>
+          <td><div class="cell-name">{{ app.type }}</div>{% if app.building_type %}<div style="font-size:12px;color:var(--text-muted);">{{ app.building_type }}</div>{% endif %}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ app.location or '—' }}</td>
+          <td>{{ app.date_submitted.strftime('%d %b %Y') if app.date_submitted else '—' }}</td>
+          <td><span class="status-pill status-{{ app.status|lower }}">{{ app.status }}</span></td>
+          <td>{{ app.officer_name or '<span style="color:var(--text-muted);">Unassigned</span>' | safe }}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <a href="{{ url_for('applicant_view_application', app_id=app.app_id) }}" class="btn-action">View</a>
+            {% if app.status == 'Pending' %}
+            <form method="POST" action="{{ url_for('applicant_withdraw', app_id=app.app_id) }}" style="display:inline;"
+              onsubmit="return confirm('Withdraw this application?')">
+              <button type="submit" class="btn-action" style="color:var(--red);border-color:var(--red-rim);">Withdraw</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px;">
+          No applications found. <a href="{{ url_for('applicant_apply') }}" style="color:var(--ember);">Apply now →</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

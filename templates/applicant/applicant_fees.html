@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fee Status | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item active">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>Fee Status</h2><p>View all fees and payment status for your applications</p></div>
+  </div>
+
+  <!-- Summary Strip -->
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px;">
+    <div class="card" style="border-left:3px solid var(--green); padding:18px 20px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);margin-bottom:6px;">Total Paid</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--green);">₹{{ '{:,.0f}'.format(summary.paid) }}</div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--yellow); padding:18px 20px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);margin-bottom:6px;">Pending</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--yellow);">₹{{ '{:,.0f}'.format(summary.pending) }}</div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--red); padding:18px 20px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);margin-bottom:6px;">Overdue</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--red);">₹{{ '{:,.0f}'.format(summary.overdue) }}</div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <table class="data-table">
+      <thead><tr><th>Ledger ID</th><th>Application</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Paid On</th></tr></thead>
+      <tbody>
+        {% for fee in fees %}
+        <tr>
+          <td><span class="tracking-id">#{{ fee.ledger_id }}</span></td>
+          <td><a href="{{ url_for('applicant_view_application', app_id=fee.app_id) }}" style="color:var(--ember);">App #{{ fee.app_id }}</a></td>
+          <td>
+            <span style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+              {% if fee.status=='Paid' %}color:var(--green)
+              {% elif fee.status=='Overdue' %}color:var(--red)
+              {% elif fee.status=='Waived' %}color:var(--text-muted)
+              {% else %}color:var(--yellow){% endif %}">
+              ₹{{ '{:,.0f}'.format(fee.amount) }}
+            </span>
+          </td>
+          <td><span class="status-pill status-{{ fee.status|lower }}">{{ fee.status }}</span></td>
+          <td>{{ fee.due_date.strftime('%d %b %Y') if fee.due_date else '—' }}</td>
+          <td>{{ fee.paid_on.strftime('%d %b %Y') if fee.paid_on else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;">No fee records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if summary.pending > 0 or summary.overdue > 0 %}
+  <div class="card" style="margin-top:16px; border:1px solid var(--yellow-rim); background:var(--yellow-dim);">
+    <p style="color:var(--yellow); font-size:14px; font-weight:600;">⚠️ You have outstanding fees. Please contact the Fire Department office to make payment. Overdue fees may affect your application status.</p>
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>

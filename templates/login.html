@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <!-- Correct way to link CSS in Flask -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="overlay">
+    <div class="login-box">
+      <h1>Login</h1>
+      <p class="subtitle">Fire Department Monitoring System</p>
+
+      {% if error %}
+        <p class="error-msg">{{ error }}</p>
+      {% endif %}
+
+      <form method="POST" action="/login">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="Enter your email" required>
+
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter your password" required>
+
+        <button type="submit" class="login-btn">Login</button>
+      </form>
+
+      <div class="links">
+        <a href="/register" class="toggle">New user? Register here</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

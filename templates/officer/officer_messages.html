@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages | Fire NOC Officer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--ember-bright);">Officer Portal</div></div></div>
+  <nav>
+    <p class="nav-label">Operations</p>
+    <a href="{{ url_for('officer_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('application_queue') }}" class="nav-item">📋 Applications</a>
+    <a href="{{ url_for('officer_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('alerts_page') }}" class="nav-item">🚨 Alerts</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('officer_messages') }}" class="nav-item active">✉️ Messages
+      {% if msg_stats.unread > 0 %}
+      <span style="background:var(--ember);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ msg_stats.unread }}</span>
+      {% endif %}
+    </a>
+    <p class="nav-label">Analytics</p>
+    <a href="{{ url_for('officer_analytics') }}" class="nav-item">📊 Analytics</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>Messages</h2><p>View and reply to applicant messages</p></div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start;">
+
+    <!-- Message Thread -->
+    <div>
+      <div class="table-card" style="margin-bottom:14px;">
+        <div style="padding:18px 20px 0;"><span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em;">Message History</span></div>
+        <div style="padding:12px 20px; display:flex; flex-direction:column; gap:10px; max-height:500px; overflow-y:auto;" id="msgThread">
+          {% for msg in messages_list %}
+          <div style="display:flex; {% if msg.sender_id == session.user_id %}justify-content:flex-end{% endif %};">
+            <div style="max-width:75%; padding:12px 16px; border-radius:12px;
+              {% if msg.sender_id == session.user_id %}
+                background:linear-gradient(135deg,var(--ember),#8b1a00); color:#fff; border-bottom-right-radius:4px;
+              {% else %}
+                background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-bottom-left-radius:4px;
+              {% endif %}">
+              <div style="font-size:11px; font-weight:700; margin-bottom:4px;
+                {% if msg.sender_id == session.user_id %}color:rgba(255,255,255,0.7){% else %}color:var(--text-muted){% endif %};">
+                {% if msg.sender_id == session.user_id %}You{% else %}{{ msg.sender_name or 'Applicant' }}{% endif %}
+                &bull; {{ msg.created_at.strftime('%d %b, %H:%M') if msg.created_at else '' }}
+                {% if msg.sender_id != session.user_id %}
+                  <span style="margin-left:6px; font-size:10px; padding:1px 6px; border-radius:6px;
+                    {% if msg.status == 'Unread' %}background:var(--ember);color:#fff;{% else %}background:var(--green);color:#fff;{% endif %}">
+                    {{ msg.status }}
+                  </span>
+                {% endif %}
+              </div>
+              {% if msg.subject %}<div style="font-size:13px;font-weight:700;margin-bottom:4px;">{{ msg.subject }}</div>{% endif %}
+              <div style="font-size:13px;line-height:1.55;">{{ msg.message }}</div>
+              <!-- Quick reply button for received messages -->
+              {% if msg.sender_id != session.user_id %}
+              <div style="margin-top:8px;">
+                <button onclick="setReplyTo('{{ msg.sender_id }}', '{{ msg.sender_name }}', 'Re: {{ msg.subject or 'Your message' }}')"
+                  style="font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text-muted);cursor:pointer;">
+                  ↩ Reply
+                </button>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:14px;">No messages yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Reply Form -->
+      <div class="card">
+        <h3>↩ Reply</h3>
+        <div id="replyBanner" style="display:none; margin:10px 0; padding:8px 12px; background:var(--bg-input); border-radius:8px; font-size:13px; color:var(--text-secondary);">
+          Replying to: <strong id="replyToName"></strong>
+          <button onclick="clearReply()" style="float:right;background:none;border:none;cursor:pointer;color:var(--text-muted);">✕ Clear</button>
+        </div>
+        <form method="POST" action="{{ url_for('officer_reply_message') }}" style="margin-top:14px;">
+          <input type="hidden" name="receiver_id" id="receiverId" value="">
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input type="text" name="subject" id="replySubject" class="form-control" placeholder="Re: your inquiry">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message *</label>
+            <textarea name="message" class="form-control" rows="4" required
+              placeholder="Type your reply here…" style="resize:vertical;"></textarea>
+          </div>
+          <button type="submit" class="btn-primary">Send Reply →</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right: Stats + Senders -->
+    <div style="position:sticky; top:80px; display:flex; flex-direction:column; gap:14px;">
+      <div class="card">
+        <h3>📊 Message Stats</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+          {% for label, val in [('Total Messages', msg_stats.total), ('Unread', msg_stats.unread), ('Responded', msg_stats.responded)] %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;color:var(--text-secondary);">{{ label }}</span>
+            <span style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;
+              {% if label == 'Unread' and val > 0 %}color:var(--ember){% else %}color:var(--text-primary){% endif %};">
+              {{ val }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Unique Senders quick-reply list -->
+      <div class="card">
+        <h3>👥 Applicants</h3>
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          {% set seen = [] %}
+          {% for msg in messages_list %}
+            {% if msg.sender_id != session.user_id and msg.sender_id not in seen %}
+              {% if seen.append(msg.sender_id) %}{% endif %}
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+                <span style="font-size:13px;color:var(--text-primary);">{{ msg.sender_name }}</span>
+                <button onclick="setReplyTo('{{ msg.sender_id }}', '{{ msg.sender_name }}', '')"
+                  style="font-size:11px;padding:3px 10px;border:1px solid var(--ember);border-radius:6px;background:transparent;color:var(--ember);cursor:pointer;">
+                  Reply
+                </button>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if not messages_list %}
+          <p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px 0;">No applicants yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // Auto-scroll message thread to bottom
+  const thread = document.getElementById('msgThread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
+
+  function setReplyTo(senderId, senderName, subject) {
+    document.getElementById('receiverId').value = senderId;
+    document.getElementById('replySubject').value = subject;
+    document.getElementById('replyToName').textContent = senderName;
+    document.getElementById('replyBanner').style.display = 'block';
+    document.querySelector('textarea[name="message"]').focus();
+  }
+
+  function clearReply() {
+    document.getElementById('receiverId').value = '';
+    document.getElementById('replySubject').value = '';
+    document.getElementById('replyToName').textContent = '';
+    document.getElementById('replyBanner').style.display = 'none';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Application | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="brand-icon">🔥</span><div><div class="brand-name">Fire NOC</div><div class="brand-sub" style="color:var(--blue);">Applicant Portal</div></div></div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item active">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications</a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span><span class="flash-text">{{ msg }}</span><button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div><h2>New NOC Application</h2><p>Fill in the details below to submit your fire safety NOC request</p></div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 280px; gap:16px; align-items:start;">
+
+    <div class="card">
+         <form method="POST" action="{{ url_for('applicant_apply') }}" enctype="multipart/form-data">
+        <!-- Section 1: Basic Info -->
+        <h3 style="margin-bottom:18px;">📋 Application Details</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label">Application Type *</label>
+            <select name="type" class="form-control" required>
+              <option value="">— Select type —</option>
+              <option value="Residential Permit">Residential Permit</option>
+              <option value="Commercial Permit">Commercial Permit</option>
+              <option value="Industrial Permit">Industrial Permit</option>
+              <option value="Warehouse Permit">Warehouse Permit</option>
+              <option value="School Building Permit">School Building Permit</option>
+              <option value="Hospital Permit">Hospital Permit</option>
+              <option value="Hotel Permit">Hotel Permit</option>
+              <option value="Mall Permit">Mall Permit</option>
+              <option value="Factory Permit">Factory Permit</option>
+              <option value="Office Permit">Office Permit</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label">Building / Location Address *</label>
+            <input type="text" name="location" class="form-control" placeholder="Full address of the premises" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Building Type</label>
+            <select name="building_type" class="form-control">
+              <option value="">— Select —</option>
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Industrial</option>
+              <option>Mixed Use</option>
+              <option>Government</option>
+              <option>Educational</option>
+              <option>Healthcare</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select name="priority_level" class="form-control">
+              <option value="Normal">Normal</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 2: Description -->
+        <div class="form-group" style="margin-top:8px;">
+          <label class="form-label">Description / Additional Notes</label>
+          <textarea name="description" class="form-control" rows="4"
+            placeholder="Describe your premises, number of floors, occupancy, fire safety measures already in place…" style="resize:vertical;"></textarea>
+        </div>
+
+        <!-- Section 3: Inspection Preference -->
+        <h3 style="margin:24px 0 16px; padding-top:20px; border-top:1px solid var(--border);">🗓️ Inspection Preference</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Preferred Date</label>
+            <input type="date" name="preferred_date" class="form-control" min="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Time</label>
+            <select name="preferred_time" class="form-control">
+              <option value="">— Any time —</option>
+              <option>09:00 AM – 11:00 AM</option>
+              <option>11:00 AM – 01:00 PM</option>
+              <option>02:00 PM – 04:00 PM</option>
+              <option>04:00 PM – 06:00 PM</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 4: Documents -->
+        <h3 style="margin:24px 0 16px; padding-top:20px; border-top:1px solid var(--border);">📎 Supporting Documents</h3>
+        <div class="form-group">
+          <label class="form-label">Upload Documents (PDF, JPG, PNG — max 10MB each)</label>
+          <div style="border:2px dashed var(--border-mid); border-radius:var(--radius); padding:24px; text-align:center;
+            background:var(--bg-input); cursor:pointer; transition:border-color var(--ease);"
+            onclick="document.getElementById('doc_upload').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--ember)'"
+            ondragleave="this.style.borderColor='var(--border-mid)'"
+            ondrop="handleDrop(event)">
+            <div style="font-size:32px; margin-bottom:8px;">📁</div>
+            <div style="font-size:14px; color:var(--text-secondary);">Click to upload or drag & drop files here</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Building plan, ownership proof, previous NOC, etc.</div>
+            <input type="file" id="doc_upload" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png"
+              style="display:none;" onchange="showFiles(this)">
+          </div>
+          <div id="file-list" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
+          <button type="submit" class="btn-primary" style="flex:1; justify-content:center;">Submit Application</button>
+          <a href="{{ url_for('applicant_applications') }}" class="btn-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Right info panel -->
+    <div style="display:flex; flex-direction:column; gap:14px; position:sticky; top:80px;">
+      <div class="card" style="border-top:2px solid var(--blue);">
+        <h3 style="color:var(--blue);">ℹ️ What Happens Next?</h3>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-top:12px;">
+          {% for step, label, desc in [
+            ('1','Submission','Your application is reviewed by admin within 1-2 business days.'),
+            ('2','Assignment','An officer will be assigned to conduct an inspection.'),
+            ('3','Inspection','Physical inspection of your premises is scheduled.'),
+            ('4','NOC Issued','Upon approval, your NOC certificate is issued digitally.')
+          ] %}
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;
+              display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;
+              font-weight:700;font-size:14px;flex-shrink:0;">{{ step }}</div>
+            <div>
+              <div style="font-weight:600;color:var(--text-primary);font-size:13px;">{{ label }}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">{{ desc }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>💰 Fee Structure</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+          {% for label, key in [('NOC Fee','fee_noc'),('Inspection Fee','fee_inspection')] %}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;color:var(--text-secondary);">{{ label }}</span>
+            <span style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-primary);">₹{{ settings.get(key,'—') }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Fees are assessed after application review.</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function showFiles(input) {
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+  Array.from(input.files).forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;font-size:13px;';
+    div.innerHTML = `<span>📄</span><span style="color:var(--text-primary);flex:1;">${f.name}</span><span style="color:var(--text-muted);">${(f.size/1024).toFixed(0)} KB</span>`;
+    list.appendChild(div);
+  });
+}
+function handleDrop(e) {
+  e.preventDefault();
+  const input = document.getElementById('doc_upload');
+  input.files = e.dataTransfer.files;
+  showFiles(input);
+  e.currentTarget.style.borderColor = 'var(--border-mid)';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "css.lint.validProperties": [
+    "composes"
+  ],
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "css.lint.compatibleVendorPrefixes": "warning",
+  "css.lint.vendorPrefix": "warning",
+  "css.lint.duplicateProperties": "warning",
+  "css.lint.emptyRulesets": "ignore",
+  "css.lint.importStatement": "ignore",
+  "css.lint.boxModel": "warning",
+  "css.lint.universalSelector": "ignore",
+  "css.lint.zeroUnits": "warning",
+  "css.lint.fontFaceProperties": "warning",
+  "css.lint.hexColorLength": "warning",
+  "css.lint.idSelector": "warning",
+  "css.lint.ieHack": "warning",
+  "css.lint.important": "warning",
+  "css.lint.importStatement": "ignore",
+  "css.lint.propertyIgnoredDueToDisplay": "warning",
+  "css.lint.universalSelector": "ignore"
+}

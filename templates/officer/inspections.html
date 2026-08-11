@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspections | Fire Dept</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🔥</span>
+        <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Officer Portal</div></div>
+    </div>
+    <nav>
+        <div class="nav-section">
+            <p class="nav-label">Command</p>
+            <a href="{{ url_for('officer_dashboard') }}" class="nav-item"><span class="nav-icon">⚡</span> Dashboard</a>
+            <a href="{{ url_for('alerts_page') }}" class="nav-item"><span class="nav-icon">🚨</span> Live Alerts</a>
+        </div>
+        <div class="nav-section">
+            <p class="nav-label">Operations</p>
+            <a href="{{ url_for('application_queue') }}" class="nav-item"><span class="nav-icon">📋</span> Application Queue</a>
+            <a href="{{ url_for('officer_inspections') }}" class="nav-item active"><span class="nav-icon">🔍</span> Inspections</a>
+            <a href="{{ url_for('officer_analytics') }}" class="nav-item"><span class="nav-icon">📊</span> Analytics</a>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="btn-logout">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">
+            <span class="flash-icon">{% if cat=='success'%}✅{% elif cat=='error'%}❌{% else %}ℹ️{% endif %}</span>
+            <span class="flash-text">{{ msg }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+        <div>
+            <h2>Inspections</h2>
+            <p>Your assigned inspection schedule and results.</p>
+        </div>
+    </div>
+
+    <!-- Today's schedule strip -->
+    {% if todays_schedule %}
+    <div class="today-strip">
+        <div class="today-label">📅 Today's Schedule — {{ todays_schedule|length }} inspection(s)</div>
+        <div class="today-cards">
+            {% for t in todays_schedule %}
+            <div class="today-card">
+                <div class="today-track">{{ t.tracking_id }}</div>
+                <div class="today-loc">{{ t.location or t.building_type or '—' }}</div>
+                <div class="today-contact">{{ t.applicant_name }} · {{ t.applicant_phone or '' }}</div>
+                <span class="status-pill status-{{ t.status | lower }}">{{ t.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter -->
+    <form method="GET" class="filter-bar" style="margin-bottom:20px;">
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            {% for s in ['Scheduled','Pending','Completed','Failed'] %}
+            <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-primary" style="padding:10px 20px;">Filter</button>
+        <a href="{{ url_for('officer_inspections') }}" class="btn-secondary" style="padding:10px 20px;">Reset</a>
+    </form>
+
+    <!-- Inspections Table -->
+    <div class="table-card">
+        {% if inspections %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Applicant</th>
+                    <th>Location</th>
+                    <th>Building Type</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Risk (ML)</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for insp in inspections %}
+                <tr>
+                    <td><span class="tracking-id">{{ insp.tracking_id }}</span></td>
+                    <td>
+                        <div class="cell-name">{{ insp.applicant_name }}</div>
+                        <div class="cell-sub">{{ insp.applicant_phone or '—' }}</div>
+                    </td>
+                    <td>{{ insp.location or '—' }}</td>
+                    <td>{{ insp.building_type or '—' }}</td>
+                    <td>{{ insp.date }}</td>
+                    <td>
+                        {% if insp.inspection_score %}
+                        <span class="score-badge {% if insp.inspection_score >= 70 %}score-good{% elif insp.inspection_score >= 40 %}score-mid{% else %}score-bad{% endif %}">
+                            {{ insp.inspection_score }}
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+    <span class="risk-badge risk-{{ insp.ml_risk_level | lower | default('unknown') }}"
+          id="risk-{{ insp.app_id }}">
+        {{ insp.ml_risk_level or '—' }}
+    </span>
+</td>
+                    <td><span class="status-pill status-{{ insp.status | lower }}">{{ insp.status }}</span></td>
+                    <td style="max-width:180px;font-size:12px;color:var(--text-secondary);">{{ insp.remarks or '—' }}</td>
+                    <td>
+                        <button
+                            class="btn-action"
+                            data-id="{{ insp.inspection_id }}"
+                            data-tracking="{{ insp.tracking_id|e }}"
+                            data-status="{{ insp.status|e }}"
+                            data-score="{{ insp.inspection_score or '' }}"
+                            data-remarks="{{ insp.remarks|e }}"
+                        >
+                            Update
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <span style="font-size:40px;opacity:0.3">🔍</span>
+            <p>No inspections found.</p>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+<!-- Update Inspection Modal -->
+<div class="modal-overlay" id="inspModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title">Update Inspection</div>
+                <div class="modal-sub" id="inspModalSub"></div>
+            </div>
+            <button class="modal-close" onclick="closeInspModal()">✕</button>
+        </div>
+        <form method="POST" id="inspUpdateForm" action="">
+            <div class="form-group">
+                <label>Result Status</label>
+                <select name="status" id="inspStatus" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:0;">
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top:16px;">
+                <label>Inspection Score (0–100)</label>
+                <input type="number" name="inspection_score" id="inspScore" min="0" max="100" placeholder="e.g. 75"
+                    style="width:100%;padding:11px 14px;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;color:var(--text-primary);font-size:14px;outline:none;margin-bottom:0;">
+            </div>
+            <div class="form-group" style="margin-top:16px;">
+                <label>Remarks</label>
+                <textarea name="remarks" id="inspRemarks" rows="3" placeholder="Inspection findings…"
+                    style="width:100%;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;padding:10px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;outline:none;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+                <button type="button" class="btn-secondary" onclick="closeInspModal()" style="flex:1;">Cancel</button>
+                <button type="submit" class="btn-primary" style="flex:2;">Save Result</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openInspModal(id, trackingId, status, score, remarks) {
+    document.getElementById('inspUpdateForm').action = `/officer/inspections/${id}/update`;
+    document.getElementById('inspModalSub').textContent = trackingId;
+    document.getElementById('inspStatus').value  = status;
+    document.getElementById('inspScore').value   = score || '';
+    document.getElementById('inspRemarks').value = remarks;
+    document.getElementById('inspModal').classList.add('active');
+}
+function closeInspModal() {
+    document.getElementById('inspModal').classList.remove('active');
+}
+document.getElementById('inspModal').addEventListener('click', function(e) {
+    if (e.target === this) closeInspModal();
+});
+
+// Attach click handlers for Update buttons using data-attributes
+document.querySelectorAll('.btn-action').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        const id = this.dataset.id;
+        const tracking = this.dataset.tracking || '';
+        const status = this.dataset.status || '';
+        const score = this.dataset.score || '';
+        const remarks = this.dataset.remarks || '';
+        openInspModal(id, tracking, status, score, remarks);
+    });
+});
+// Fetch ML risk scores for all inspections
+document.querySelectorAll('[id^="risk-"]').forEach(function(el) {
+    const appId = el.id.replace('risk-', '');
+    const row = el.closest('tr');
+    const score = row.querySelector('.score-badge') ? parseInt(row.querySelector('.score-badge').textContent) : 0;
+    const pendingFollowups = 0; // extend if you pass this from Flask
+    fetch('/api/risk-score', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            total_inspections: 1,
+            days_since_inspection: 0,
+            checklist_score: score,
+            failed_checks: score < 40 ? 3 : 0,
+            pending_followups: pendingFollowups,
+            noc_active: 1,
+            status_changes: 1
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        el.textContent = data.risk_level;
+        el.className = 'risk-badge risk-' + data.risk_level.toLowerCase();
+    })
+    .catch(() => { el.textContent = '—'; });
+});
+</script>
+</body>
+</html>

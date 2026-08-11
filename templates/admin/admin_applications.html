@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Applications | Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔥</span>
+    <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Admin Portal</div></div>
+  </div>
+  <nav>
+    <p class="nav-label">Main</p>
+    <a href="{{ url_for('admin_dashboard') }}" class="nav-item">📊 Dashboard</a>
+    <a href="{{ url_for('admin_users') }}" class="nav-item">👥 Manage Users</a>
+    <a href="{{ url_for('admin_applications') }}" class="nav-item active">📋 All Applications</a>
+    <p class="nav-label">Finance & Certs</p>
+    <a href="{{ url_for('admin_fees') }}" class="nav-item">💰 Fee Management</a>
+    <a href="{{ url_for('admin_nocs') }}" class="nav-item">📜 NOC Certificates</a>
+    <p class="nav-label">System</p>
+    <a href="{{ url_for('admin_announcements') }}" class="nav-item">📢 Announcements</a>
+    <a href="{{ url_for('admin_audit') }}" class="nav-item">🔍 Audit Logs</a>
+    <a href="{{ url_for('admin_reports') }}" class="nav-item">📈 Reports</a>
+    <a href="{{ url_for('admin_settings') }}" class="nav-item">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span>
+        <span class="flash-text">{{ msg }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <h2>All Applications</h2>
+      <p>View, assign officers, and override decisions on any application.</p>
+    </div>
+  </div>
+
+  <!-- KPI mini row -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+    <div class="kpi-card kpi-alert"><span class="kpi-value" style="font-size:34px">{{ counts.total }}</span><div class="kpi-label">Total</div></div>
+    <div class="kpi-card kpi-pending"><span class="kpi-value" style="font-size:34px">{{ counts.pending }}</span><div class="kpi-label">Pending</div></div>
+    <div class="kpi-card kpi-approved"><span class="kpi-value" style="font-size:34px">{{ counts.approved }}</span><div class="kpi-label">Approved</div></div>
+    <div class="kpi-card kpi-rejected"><span class="kpi-value" style="font-size:34px">{{ counts.rejected }}</span><div class="kpi-label">Rejected</div></div>
+    <div class="kpi-card kpi-inspection"><span class="kpi-value" style="font-size:34px">{{ counts.inspection }}</span><div class="kpi-label">Inspection</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input class="filter-input" type="text" id="appSearch" placeholder="🔍  Search ID, name, or location…" oninput="filterApps()">
+    <select class="filter-select" id="statusFilter" onchange="filterApps()">
+      <option value="">All Statuses</option>
+      <option value="Pending">Pending</option>
+      <option value="Approved">Approved</option>
+      <option value="Rejected">Rejected</option>
+      <option value="Scheduled">Scheduled</option>
+    </select>
+    <select class="filter-select" id="typeFilter" onchange="filterApps()">
+      <option value="">All Types</option>
+      <option value="NOC Request">NOC Request</option>
+      <option value="Fire Safety Inspection">Inspection</option>
+      <option value="License Renewal">License Renewal</option>
+    </select>
+  </div>
+
+  <div class="table-card">
+    <table class="data-table" id="appTable">
+      <thead><tr>
+        <th>ID</th><th>Applicant</th><th>Type</th><th>Location</th>
+        <th>Status</th><th>Officer</th><th>Submitted</th><th>Actions</th><th>ML Type</th>
+      </tr></thead>
+      <tbody>
+        {% for a in applications %}
+        <tr data-search="{{ a.applicant_name|lower }} {{ a.location|lower }} {{ a.app_id }}"
+            data-status="{{ a.status }}" data-type="{{ a.type }}">
+          <td><span class="tracking-id">#{{ a.app_id }}</span></td>
+          <td><div class="cell-name">{{ a.applicant_name }}</div><div class="cell-sub">{{ a.applicant_email }}</div></td>
+          <td style="font-size:13px">{{ a.type }}</td>
+          <td style="font-size:13px;color:var(--text-secondary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.location or '—' }}</td>
+          <td><span class="status-pill status-{{ a.status|lower }}">{{ a.status }}</span></td>
+          <td style="font-size:13px;color:var(--text-secondary)">{{ a.officer_name or '<span style="color:var(--text-muted)">Unassigned</span>'|safe }}</td>
+          <td style="font-size:13px;color:var(--text-muted)">{{ a.date_submitted.strftime('%d %b %Y') if a.date_submitted else '—' }}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{{ url_for('admin_view_application', app_id=a.app_id) }}" class="btn-action">View</a>
+              <button class="btn-assign" onclick="openAssign({{ a.app_id }}, '{{ a.officer_name or '' }}')">Assign</button>
+            </div>
+          <td><span class="ml-tag" id="mltag-{{ a.app_id }}">—</span></td>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px">No applications found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Assign Officer Modal -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Assign Officer</div>
+        <div class="modal-sub" id="assignSub">Application #—</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('assignModal').classList.remove('active')">✕</button>
+    </div>
+    <form method="POST" id="assignForm">
+      <div class="form-group" style="margin-bottom:20px">
+        <label>Select Officer</label>
+        <select name="officer_id" required>
+          <option value="">— Choose officer —</option>
+          {% for o in officers %}
+          <option value="{{ o.user_id }}">{{ o.name }} ({{ o.active_count }} active)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('assignModal').classList.remove('active')">Cancel</button>
+        <button type="submit" class="btn-primary">Assign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function filterApps() {
+  const q    = document.getElementById('appSearch').value.toLowerCase();
+  const stat = document.getElementById('statusFilter').value;
+  const type = document.getElementById('typeFilter').value;
+  document.querySelectorAll('#appTable tbody tr[data-search]').forEach(r => {
+    const sm = !q    || r.dataset.search.includes(q);
+    const st = !stat || r.dataset.status === stat;
+    const ty = !type || r.dataset.type === type;
+    r.style.display = sm && st && ty ? '' : 'none';
+  });
+}
+
+function openAssign(appId, officerName) {
+  document.getElementById('assignSub').textContent = 'Application #' + appId;
+  document.getElementById('assignForm').action = '/admin/applications/' + appId + '/assign';
+  document.getElementById('assignModal').classList.add('active');
+}
+// Fetch ML classification for each application
+document.querySelectorAll('[id^="mltag-"]').forEach(function(el) {
+    const appId = el.id.replace('mltag-', '');
+    const row = el.closest('tr');
+    const typeText = row.dataset.type || '';
+    const locText  = row.dataset.search || '';
+    fetch('/api/classify-application', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            building_type: typeText,
+            description: locText,
+            priority_level: 0,
+            checklist_score: 0,
+            fee_amount: 0
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        el.textContent = data.type + ' (' + data.confidence + '%)';
+        el.className = 'ml-tag ml-tag-active';
+    })
+    .catch(() => { el.textContent = '—'; });
+});
+</script>
+</body>
+</html>

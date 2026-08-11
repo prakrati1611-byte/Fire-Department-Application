@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Queue | Fire Dept</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🔥</span>
+        <div><div class="brand-name">Fire Dept</div><div class="brand-sub">Officer Portal</div></div>
+    </div>
+    <nav>
+        <div class="nav-section">
+            <p class="nav-label">Command</p>
+            <a href="{{ url_for('officer_dashboard') }}" class="nav-item"><span class="nav-icon">⚡</span> Dashboard</a>
+            <a href="{{ url_for('alerts_page') }}" class="nav-item"><span class="nav-icon">🚨</span> Live Alerts</a>
+        </div>
+        <div class="nav-section">
+            <p class="nav-label">Operations</p>
+            <a href="{{ url_for('application_queue') }}" class="nav-item active"><span class="nav-icon">📋</span> Application Queue</a>
+            <a href="{{ url_for('officer_inspections') }}" class="nav-item"><span class="nav-icon">🔍</span> Inspections</a>
+            <a href="{{ url_for('officer_analytics') }}" class="nav-item"><span class="nav-icon">📊</span> Analytics</a>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><a href="{{ url_for('logout') }}" class="btn-logout">🚪 Logout</a></div>
+</aside>
+
+<main class="main-content">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">
+            <span class="flash-icon">{% if cat=='success'%}✅{% elif cat=='error'%}❌{% else %}ℹ️{% endif %}</span>
+            <span class="flash-text">{{ msg }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+        <div>
+            <h2>Application Queue</h2>
+            <p>{{ applications|length }} application(s) matching current filter.</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="filter-bar">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search by name, tracking ID, location…" class="filter-input">
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            {% for s in ['Pending','Approved','Rejected','Withdrawn'] %}
+            <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <select name="priority" class="filter-select">
+            <option value="">All Priorities</option>
+            {% for p in ['Low','Normal','High','Critical'] %}
+            <option value="{{ p }}" {% if priority_filter==p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-primary" style="padding:10px 20px;">Filter</button>
+        <a href="{{ url_for('application_queue') }}" class="btn-secondary" style="padding:10px 20px;">Reset</a>
+    </form>
+
+    <!-- Applications Table -->
+    <div class="table-card">
+        {% if applications %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Applicant</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Building</th>
+                    <th>Submitted</th>
+                    <th>Days Pending</th>
+                    <th>Priority</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                    <th>Risk (ML)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr class="{% if app.days_pending > 14 %}row-overdue{% endif %}">
+                    <td><span class="tracking-id">{{ app.tracking_id or app.app_id }}</span></td>
+                    <td>
+                        <div class="cell-name">{{ app.applicant_name }}</div>
+                        <div class="cell-sub">{{ app.applicant_phone or '—' }}</div>
+                    </td>
+                    <td>{{ app.type }}</td>
+                    <td><span class="cell-location">{{ app.location or '—' }}</span></td>
+                    <td>{{ app.building_type or '—' }}</td>
+                    <td>{{ app.date_submitted }}</td>
+                    <td>
+                        <span class="days-badge {% if app.days_pending > 14 %}days-critical{% elif app.days_pending > 7 %}days-warn{% else %}days-ok{% endif %}">
+                            {{ app.days_pending }}d
+                        </span>
+                    </td>
+                    <td>
+                        <span class="priority-badge priority-{{ app.priority_level | lower }}">
+                            {{ app.priority_level or 'Normal' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if app.inspection_score %}
+                            <span class="score-badge {% if app.inspection_score >= 70 %}score-good{% elif app.inspection_score >= 40 %}score-mid{% else %}score-bad{% endif %}">
+                                {{ app.inspection_score }}
+                            </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td><span class="status-pill status-{{ app.status | lower }}">{{ app.status }}</span></td>
+                    <td>
+                        <button class="btn-action" onclick="openModal({{ app.app_id }}, '{{ app.applicant_name }}', '{{ app.tracking_id }}', '{{ app.status }}')">
+                            Manage
+                        </button>
+                    <td><span class="risk-badge" id="orisk-{{ app.app_id }}">…</span></td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <span style="font-size:40px;opacity:0.3">📭</span>
+            <p>No applications match your current filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+<!-- Action Modal -->
+<div class="modal-overlay" id="actionModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modalTitle">Manage Application</div>
+                <div class="modal-sub" id="modalSub"></div>
+            </div>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+
+        <!-- Approve -->
+        <form method="POST" id="approveForm" action="">
+            <input type="hidden" name="action" value="Approved">
+            <div class="form-group">
+                <label>Notes (optional)</label>
+                <textarea name="notes" rows="3" placeholder="Approval notes…" style="width:100%;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;padding:10px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;outline:none;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button type="submit" class="btn-primary" style="flex:1;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 14px rgba(34,197,94,0.3)">✅ Approve &amp; Issue NOC</button>
+            </div>
+        </form>
+
+        <div class="modal-divider"></div>
+
+        <!-- Reject -->
+        <form method="POST" id="rejectForm" action="">
+            <input type="hidden" name="action" value="Rejected">
+            <div class="form-group">
+                <label>Rejection Reason <span style="color:var(--ember)">*</span></label>
+                <textarea name="notes" rows="2" required placeholder="State reason for rejection…" style="width:100%;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;padding:10px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;outline:none;"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;background:linear-gradient(135deg,#ef4444,#b91c1c);box-shadow:0 4px 14px rgba(239,68,68,0.3)">❌ Reject Application</button>
+        </form>
+
+        <div class="modal-divider"></div>
+
+        <!-- Assign -->
+        <form method="POST" id="assignForm" action="">
+            <input type="hidden" name="action" value="assign">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>Reassign to Officer</label>
+                <select name="assign_to" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-mid);border-radius:8px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+                    {% for officer in officers %}
+                    <option value="{{ officer.user_id }}">{{ officer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-secondary" style="width:100%">🔁 Reassign</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(appId, name, trackingId, status) {
+    const base = `/officer/applications/${appId}/action`;
+    document.getElementById('approveForm').action = base;
+    document.getElementById('rejectForm').action  = base;
+    document.getElementById('assignForm').action  = base;
+    document.getElementById('modalTitle').textContent = `Manage — ${trackingId || '#' + appId}`;
+    document.getElementById('modalSub').textContent   = name;
+    document.getElementById('actionModal').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('actionModal').classList.remove('active');
+}
+document.getElementById('actionModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+document.querySelectorAll('[id^="orisk-"]').forEach(function(el) {
+    const appId = el.id.replace('orisk-', '');
+    const row = el.closest('tr');
+    const score = row.querySelector('.score-badge') ? parseInt(row.querySelector('.score-badge').textContent) : 50;
+    fetch('/api/risk-score', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            total_inspections: 1, days_since_inspection: 30,
+            checklist_score: score, failed_checks: score < 40 ? 3 : 0,
+            pending_followups: 0, noc_active: 1, status_changes: 1
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        el.textContent = data.risk_level + ' · ' + data.score;
+        el.className = 'risk-badge risk-' + data.risk_level.toLowerCase();
+    });
+});
+</script>
+</body>
+</html>

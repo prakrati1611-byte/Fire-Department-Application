@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard | Fire NOC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .applicant-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+    @media(max-width:900px){ .applicant-kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:500px){ .applicant-kpi-grid{ grid-template-columns:1fr; } }
+    .dash-grid { display:grid; grid-template-columns:1fr 340px; gap:16px; }
+    @media(max-width:1000px){ .dash-grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔥</span>
+    <div>
+      <div class="brand-name">Fire NOC</div>
+      <div class="brand-sub" style="color:var(--blue);">Applicant Portal</div>
+    </div>
+  </div>
+  <nav>
+    <p class="nav-label">My Portal</p>
+    <a href="{{ url_for('applicant_dashboard') }}" class="nav-item active">🏠 Dashboard</a>
+    <a href="{{ url_for('applicant_applications') }}" class="nav-item">📋 My Applications</a>
+    <a href="{{ url_for('applicant_apply') }}" class="nav-item">➕ New Application</a>
+    <p class="nav-label">Documents & Fees</p>
+    <a href="{{ url_for('applicant_documents') }}" class="nav-item">📎 Documents</a>
+    <a href="{{ url_for('applicant_fees') }}" class="nav-item">💰 Fee Status</a>
+    <a href="{{ url_for('applicant_nocs') }}" class="nav-item">📜 My NOCs</a>
+    <p class="nav-label">Communication</p>
+    <a href="{{ url_for('applicant_inspections') }}" class="nav-item">🗓️ Inspections</a>
+    <a href="{{ url_for('applicant_messages') }}" class="nav-item">✉️ Messages</a>
+    <a href="{{ url_for('applicant_notifications') }}" class="nav-item">🔔 Notifications
+      {% if unread_count and unread_count > 0 %}
+      <span style="background:var(--ember);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ unread_count }}</span>
+      {% endif %}
+    </a>
+    <p class="nav-label">Account</p>
+    <a href="{{ url_for('applicant_profile') }}" class="nav-item">👤 Profile</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a>
+  </div>
+</aside>
+
+<main class="main-content">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        <span class="flash-icon">{% if cat=='success' %}✅{% elif cat=='error' %}❌{% else %}ℹ️{% endif %}</span>
+        <span class="flash-text">{{ msg }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="page-header">
+    <div>
+      <h2>Welcome, {{ session.username }}!</h2>
+      <p>Here's an overview of your NOC applications — {{ now.strftime('%B %d, %Y') }}</p>
+    </div>
+    <a href="{{ url_for('applicant_apply') }}" class="btn-primary" style="gap:8px;">➕ New Application</a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="applicant-kpi-grid">
+    <div class="kpi-card kpi-approved">
+      <span class="kpi-icon">📋</span>
+      <span class="kpi-value">{{ stats.total }}</span>
+      <div class="kpi-label">Total Applications</div>
+      <a href="{{ url_for('applicant_applications') }}" class="kpi-link">View all →</a>
+    </div>
+    <div class="kpi-card kpi-pending">
+      <span class="kpi-icon">⏳</span>
+      <span class="kpi-value">{{ stats.pending }}</span>
+      <div class="kpi-label">Pending Review</div>
+    </div>
+    <div class="kpi-card kpi-approved">
+      <span class="kpi-icon">✅</span>
+      <span class="kpi-value">{{ stats.approved }}</span>
+      <div class="kpi-label">Approved</div>
+    </div>
+    <div class="kpi-card kpi-noc">
+      <span class="kpi-icon">📜</span>
+      <span class="kpi-value">{{ stats.nocs }}</span>
+      <div class="kpi-label">Active NOCs</div>
+      <a href="{{ url_for('applicant_nocs') }}" class="kpi-link">Download →</a>
+    </div>
+  </div>
+
+  <div class="dash-grid">
+
+    <!-- Recent Applications -->
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <div class="table-card">
+        <div style="padding:18px 20px 0; display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--ember-bright);text-transform:uppercase;letter-spacing:.09em;">Recent Applications</span>
+          <a href="{{ url_for('applicant_applications') }}" class="kpi-link">View all →</a>
+        </div>
+        <table class="data-table" style="margin-top:10px;">
+          <thead><tr>
+            <th>ID</th><th>Type</th><th>Status</th><th>Submitted</th><th>Action</th>
+          </tr></thead>
+          <tbody>
+            {% for app in recent_apps %}
+            <tr>
+              <td><span class="tracking-id">#{{ app.app_id }}</span></td>
+              <td>{{ app.type }}</td>
+              <td><span class="status-pill status-{{ app.status|lower }}">{{ app.status }}</span></td>
+              <td>{{ app.date_submitted.strftime('%d %b %Y') if app.date_submitted else '—' }}</td>
+              <td><a href="{{ url_for('applicant_view_application', app_id=app.app_id) }}" class="btn-action">View</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px;">
+              No applications yet. <a href="{{ url_for('applicant_apply') }}" style="color:var(--ember);">Apply now →</a>
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Fee Summary -->
+      <div class="card">
+        <h3>💰 Fee Summary</h3>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px;">
+          <div style="text-align:center; padding:14px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--green);">₹{{ '{:,.0f}'.format(fees.paid) }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Paid</div>
+          </div>
+          <div style="text-align:center; padding:14px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--yellow);">₹{{ '{:,.0f}'.format(fees.pending) }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Pending</div>
+          </div>
+          <div style="text-align:center; padding:14px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--red);">₹{{ '{:,.0f}'.format(fees.overdue) }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Overdue</div>
+          </div>
+        </div>
+        <a href="{{ url_for('applicant_fees') }}" class="kpi-link" style="display:inline-block;margin-top:12px;">View fee details →</a>
+      </div>
+    </div>
+
+    <!-- RIGHT: Announcements + Inspections -->
+    <div style="display:flex; flex-direction:column; gap:14px;">
+
+      <!-- Upcoming Inspection -->
+      {% if next_inspection %}
+      <div class="card" style="border-top:2px solid var(--blue);">
+        <h3 style="color:var(--blue);">🗓️ Upcoming Inspection</h3>
+        <div style="margin-top:12px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--text-primary);">
+            {{ next_inspection.date.strftime('%d %b') if next_inspection.date else '—' }}
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">
+            {{ next_inspection.date.strftime('%A, %Y') if next_inspection.date else '' }}
+          </div>
+          <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">
+            App #{{ next_inspection.app_id }} &bull; {{ next_inspection.status }}
+          </div>
+          {% if next_inspection.remarks %}
+          <div style="margin-top:8px;font-size:13px;color:var(--text-secondary);font-style:italic;">
+            "{{ next_inspection.remarks }}"
+          </div>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('applicant_inspections') }}" class="kpi-link" style="display:inline-block;margin-top:12px;">All inspections →</a>
+      </div>
+      {% endif %}
+
+      <!-- Announcements -->
+      <div class="card" style="flex:1;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 style="margin:0;">📢 Announcements</h3>
+          <a href="{{ url_for('applicant_notifications') }}" class="kpi-link">All →</a>
+        </div>
+        {% for ann in announcements %}
+        <div style="padding:12px 0; border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            {% if ann.priority == 'urgent' %}
+            <span style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;">🔴 Urgent</span>
+            {% elif ann.priority == 'high' %}
+            <span style="font-size:10px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.08em;">🟡 High</span>
+            {% endif %}
+            <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--text-primary);">{{ ann.title }}</span>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin:0;">{{ ann.message[:120] }}{% if ann.message|length > 120 %}…{% endif %}</p>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">{{ ann.created_at.strftime('%d %b %Y') if ann.created_at else '' }}</div>
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;">No announcements yet.</p>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>
