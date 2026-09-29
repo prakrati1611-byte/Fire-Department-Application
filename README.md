@@ -117,4 +117,9 @@ python run_backfill.py
 
 ## Team
 
-Built by a 4-person team 
+## Team
+
+Built as a 4-person Minor Project under the guidance of Prof. Harshit Bharti. Role breakdown:
+
+- **Prakrati (prakrati1611-byte)** — Frontend (all three portals), machine learning pipeline (RandomForest + GradientBoosting), backend (Flask, MySQL schema, ML integration)
+
